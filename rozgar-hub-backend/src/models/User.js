@@ -116,6 +116,17 @@ const userSchema = new mongoose.Schema(
       default: null,
     },
 
+    // ── Worker skills (multi-select from JobTitle slugs) ──
+    skills: [
+      {
+        slug:        { type: String, required: true },
+        name:        { type: String, required: true },
+        proficiency: { type: String, enum: ["beginner", "intermediate", "expert"], default: "intermediate" },
+        extraData:   { type: mongoose.Schema.Types.Mixed, default: {} },
+        _id:         false,
+      },
+    ],
+
     // ── Uploaded Documents (Cloudinary URLs) ──
     documents: {
       profilePhoto: {
@@ -160,6 +171,33 @@ const userSchema = new mongoose.Schema(
     },
 
     otpAttempts: {
+      type: Number,
+      default: 0,
+    },
+
+    // ── Points for profile completion milestones ──
+    points: {
+      type: Number,
+      default: 0,
+    },
+
+    // ── Flags for profile progress tracking ──
+    availabilityPosted: {
+      type: Boolean,
+      default: false,
+    },
+
+    availabilityPointsAwarded: {
+      type: Boolean,
+      default: false,
+    },
+
+    driverLicensePointsAwarded: {
+      type: Boolean,
+      default: false,
+    },
+
+    jobsPosted: {
       type: Number,
       default: 0,
     },

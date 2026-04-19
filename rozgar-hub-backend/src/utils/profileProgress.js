@@ -4,16 +4,19 @@
  * @returns {Object} - Progress breakdown and percentage
  */
 const calculateProfileProgress = (user) => {
+  const isDriver = user.role === "worker" && (user.category === "driver" || (user.skills || []).some(s => s.slug === "driver"));
+
   const progress = {
-    profilePhoto: user.documents?.profilePhoto ? 100 : 0,
-    documents: user.documents?.cnicFront && user.documents?.cnicBack ? 100 : 0,
-    category: user.category ? 100 : 0,
-    drivingLicense: 0, // Only for drivers
-    firstPost: 0, // Only for employers
+    profilePhoto:    user.documents?.profilePhoto ? 100 : 0,
+    documents:       user.documents?.cnicFront && user.documents?.cnicBack ? 100 : 0,
+    emailVerified:   user.isEmailVerified ? 100 : 0,
+    availability:    user.availabilityPosted || user.category ? 100 : 0,
+    drivingLicense:  0, // Only for drivers
+    firstPost:       0, // Only for employers
   };
 
-  // For workers: check if driving license required
-  if (user.role === "worker" && user.category === "driver") {
+  // For workers: check if driving license uploaded (only required for drivers)
+  if (isDriver) {
     progress.drivingLicense = user.documents?.drivingLicense ? 100 : 0;
   }
 
@@ -27,25 +30,21 @@ const calculateProfileProgress = (user) => {
   let completed = 0;
 
   if (user.role === "worker") {
-    // Worker requirements: photo (20%), documents (20%), category (20%), license (20%), points from jobs (20%)
-    total = 5;
+    // Steps: registered(always), emailVerified, photo, cnic, availability, license(drivers), adminVerified
+    total = isDriver ? 6 : 5;
+    completed += 1; // registered — always done
+    completed += progress.emailVerified > 0 ? 1 : 0;
     completed += progress.profilePhoto > 0 ? 1 : 0;
     completed += progress.documents > 0 ? 1 : 0;
-    completed += progress.category > 0 ? 1 : 0;
-
-    if (user.category === "driver") {
-      completed += progress.drivingLicense > 0 ? 1 : 0;
-    } else {
-      completed += 1; // Skip license requirement
-    }
-
-    // 20% from having experience/jobs
-    completed += user.points > 0 ? 1 : 0;
+    completed += progress.availability > 0 ? 1 : 0;
+    if (isDriver) completed += progress.drivingLicense > 0 ? 1 : 0;
   } else if (user.role === "employer") {
-    // Employer requirements: photo (33%), documents (33%), first post (34%)
-    total = 3;
+    // Steps: registered(always), photo, cnic, emailVerified, firstPost, adminVerified
+    total = 5;
+    completed += 1; // registered
     completed += progress.profilePhoto > 0 ? 1 : 0;
     completed += progress.documents > 0 ? 1 : 0;
+    completed += progress.emailVerified > 0 ? 1 : 0;
     completed += progress.firstPost > 0 ? 1 : 0;
   }
 
@@ -65,11 +64,12 @@ const buildProfileUpdate = (user) => {
 
   return {
     profileProgress: {
-      profilePhoto: result.breakdown.profilePhoto > 0,
-      documents: result.breakdown.documents > 0,
-      category: result.breakdown.category > 0,
-      drivingLicense: result.breakdown.drivingLicense > 0,
-      firstPost: result.breakdown.firstPost > 0,
+      profilePhoto:    result.breakdown.profilePhoto > 0,
+      documents:       result.breakdown.documents > 0,
+      emailVerified:   result.breakdown.emailVerified > 0,
+      availability:    result.breakdown.availability > 0,
+      drivingLicense:  result.breakdown.drivingLicense > 0,
+      firstPost:       result.breakdown.firstPost > 0,
       profilePercentage: result.percentage,
     },
   };

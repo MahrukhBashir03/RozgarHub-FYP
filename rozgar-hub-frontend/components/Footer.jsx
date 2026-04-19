@@ -1,68 +1,48 @@
 "use client";
-import { Facebook, Twitter, Instagram, Linkedin, Mail, MapPin, Phone } from "lucide-react";
+import Image from "next/image";
+import { Mail, MapPin, Phone } from "lucide-react";
 import { useLanguage } from "@/app/context/LanguageContext";
 
 const content = {
   en: {
     dir: "ltr",
-    tagline: "AI-powered employment platform connecting skilled workers with employers across Pakistan. Building bridges between opportunity and talent.",
+    tagline:
+      "Connecting Pakistan's skilled workforce with trusted employers. Fast, transparent, and built for real people.",
     quickLinksTitle: "Quick Links",
-    supportTitle: "Support",
-    contactTitle: "Contact",
-    address: "Karachi, Sindh, Pakistan",
-    copyright: "All rights reserved. Made with ❤️ in Pakistan",
+    contactTitle: "Contact Us",
+    address: "Lahore, Pakistan",
+    copyright: "All rights reserved. Made in Pakistan 🇵🇰",
     quickLinks: [
       { label: "Home", href: "#home" },
+      { label: "About", href: "#about" },
       { label: "Features", href: "#features" },
       { label: "How It Works", href: "#how-it-works" },
-      { label: "Testimonials", href: "#testimonials" },
-    ],
-    support: [
-      { label: "Help Center", href: "#help" },
-      { label: "Privacy Policy", href: "#privacy" },
-      { label: "Terms & Conditions", href: "#terms" },
-      { label: "FAQs", href: "#faqs" },
     ],
     bottomLinks: [
-      { label: "Privacy", href: "#privacy" },
-      { label: "Terms", href: "#terms" },
-      { label: "Cookies", href: "#cookies" },
+      { label: "Privacy", href: "#" },
+      { label: "Terms", href: "#" },
     ],
   },
   ur: {
     dir: "rtl",
-    tagline: "اے آئی سے چلنے والا روزگار پلیٹ فارم جو پاکستان بھر میں ہنر مند کارکنوں کو آجروں سے جوڑتا ہے۔ موقع اور صلاحیت کے درمیان پل بناتا ہے۔",
+    tagline:
+      "پاکستان کی ہنر مند افرادی قوت کو قابل اعتماد آجروں سے جوڑنا۔ تیز، شفاف، اور حقیقی لوگوں کے لیے بنایا گیا۔",
     quickLinksTitle: "فوری لنکس",
-    supportTitle: "مدد",
-    contactTitle: "رابطہ",
-    address: "کراچی، سندھ، پاکستان",
-    copyright: "جملہ حقوق محفوظ ہیں۔ پاکستان میں ❤️ کے ساتھ بنایا گیا",
+    contactTitle: "ہم سے رابطہ کریں",
+    address: "لاہور، پاکستان",
+    copyright: "جملہ حقوق محفوظ ہیں۔ پاکستان میں بنایا گیا 🇵🇰",
     quickLinks: [
       { label: "ہوم", href: "#home" },
+      { label: "ہمارے بارے میں", href: "#about" },
       { label: "خصوصیات", href: "#features" },
       { label: "یہ کیسے کام کرتا ہے", href: "#how-it-works" },
-      { label: "تجربات", href: "#testimonials" },
-    ],
-    support: [
-      { label: "مدد مرکز", href: "#help" },
-      { label: "رازداری کی پالیسی", href: "#privacy" },
-      { label: "شرائط و ضوابط", href: "#terms" },
-      { label: "اکثر پوچھے گئے سوالات", href: "#faqs" },
     ],
     bottomLinks: [
-      { label: "رازداری", href: "#privacy" },
-      { label: "شرائط", href: "#terms" },
-      { label: "کوکیز", href: "#cookies" },
+      { label: "رازداری", href: "#" },
+      { label: "شرائط", href: "#" },
     ],
   },
 };
-
-const social = [
-  { icon: Facebook, href: "#", label: "Facebook" },
-  { icon: Twitter, href: "#", label: "Twitter" },
-  { icon: Instagram, href: "#", label: "Instagram" },
-  { icon: Linkedin, href: "#", label: "LinkedIn" },
-];
 
 const urduFont = { fontFamily: "'Noto Nastaliq Urdu', serif", lineHeight: "2" };
 
@@ -75,68 +55,54 @@ export default function Footer() {
 
   return (
     <footer
+      id="contact"
       dir={t.dir}
-      className="relative bg-gradient-to-br from-[#0f172a] via-[#111827] to-[#0b1120] border-t border-white/10 text-gray-300 overflow-hidden"
+      className="relative bg-gradient-to-br from-[#08131e] via-[#0a1628] to-[#08131e] border-t border-white/10 text-gray-400 overflow-hidden"
     >
-      {/* Glow Background */}
+      {/* Background glows */}
       <div className="absolute inset-0 pointer-events-none">
-        <div className="absolute -bottom-40 -left-40 w-96 h-96 bg-orange-500/10 rounded-full blur-3xl" />
-        <div className="absolute -top-40 -right-40 w-96 h-96 bg-blue-500/10 rounded-full blur-3xl" />
+        <div className="absolute -bottom-32 -left-32 w-80 h-80 bg-green-500/5 rounded-full blur-3xl" />
+        <div className="absolute -top-32 -right-32 w-80 h-80 bg-blue-500/6 rounded-full blur-3xl" />
       </div>
 
-      <div className="container mx-auto px-6 py-16 relative z-10">
+      <div className="max-w-7xl mx-auto px-6 pt-16 pb-10 relative z-10">
 
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-12 mb-12">
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-12 mb-14">
 
-          {/* Brand */}
-          <div className="space-y-5">
+          {/* Brand Column */}
+          <div className="space-y-5 md:col-span-1">
             <div className="flex items-center gap-3">
-              <div className="p-3 rounded-xl bg-orange-500 shadow-lg shadow-orange-500/30">
-                <svg className="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
-                    d="M21 13.255A23.931 23.931 0 0112 15c-3.183 0-6.22-.62-9-1.745M16 6V4a2 2 0 00-2-2h-4a2 2 0 00-2 2v2m4 6h.01M5 20h14a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
-                </svg>
+              <div className="w-11 h-11 rounded-xl bg-white flex items-center justify-center shadow-lg shadow-green-500/25 overflow-hidden p-1">
+                <Image src="/logo.png" alt="Rozgar Hub Logo" width={40} height={40} className="object-contain" />
               </div>
-              <h3 className="text-2xl font-extrabold text-white tracking-wide">Rozgar Hub</h3>
+              <h3 className="text-white font-extrabold text-xl leading-none tracking-wide">Rozgar <span className="text-green-400">Hub</span></h3>
             </div>
-            <p className="text-sm text-gray-400 leading-relaxed" style={lf}>{t.tagline}</p>
-            <div className="flex gap-4 pt-2">
-              {social.map((s) => (
-                <a key={s.label} href={s.href}
-                  className="p-2 rounded-lg bg-white/5 hover:bg-orange-500/20 transition duration-300 group"
-                  aria-label={s.label}
-                >
-                  <s.icon className="w-4 h-4 text-gray-400 group-hover:text-orange-400 transition" />
-                </a>
-              ))}
-            </div>
+
+            <p className="text-sm text-gray-300 leading-relaxed" style={lf}>
+              {t.tagline}
+            </p>
+
           </div>
 
           {/* Quick Links */}
           <div>
-            <h4 className="font-semibold text-white mb-5 border-l-4 border-orange-500 pl-3" style={lf}>
+            <h4
+              className={`font-bold text-white text-sm mb-6 ${
+                isUrdu ? "border-r-4 border-green-500 pr-3" : "border-l-4 border-green-500 pl-3"
+              }`}
+              style={lf}
+            >
               {t.quickLinksTitle}
             </h4>
             <ul className="space-y-3">
               {t.quickLinks.map((link) => (
                 <li key={link.label}>
-                  <a href={link.href} className="text-gray-400 hover:text-orange-400 transition duration-300 text-sm" style={lf}>
-                    {link.label}
-                  </a>
-                </li>
-              ))}
-            </ul>
-          </div>
-
-          {/* Support */}
-          <div>
-            <h4 className="font-semibold text-white mb-5 border-l-4 border-orange-500 pl-3" style={lf}>
-              {t.supportTitle}
-            </h4>
-            <ul className="space-y-3">
-              {t.support.map((link) => (
-                <li key={link.label}>
-                  <a href={link.href} className="text-gray-400 hover:text-orange-400 transition duration-300 text-sm" style={lf}>
+                  <a
+                    href={link.href}
+                    className="text-gray-300 hover:text-green-400 transition-colors duration-200 text-sm flex items-center gap-2 group"
+                    style={lf}
+                  >
+                    <span className="w-1 h-1 rounded-full bg-gray-600 group-hover:bg-green-400 transition-colors" />
                     {link.label}
                   </a>
                 </li>
@@ -146,41 +112,72 @@ export default function Footer() {
 
           {/* Contact */}
           <div>
-            <h4 className="font-semibold text-white mb-5 border-l-4 border-orange-500 pl-3" style={lf}>
+            <h4
+              className={`font-bold text-white text-sm mb-6 ${
+                isUrdu ? "border-r-4 border-green-500 pr-3" : "border-l-4 border-green-500 pl-3"
+              }`}
+              style={lf}
+            >
               {t.contactTitle}
             </h4>
             <ul className="space-y-4">
-              <li className="flex items-start gap-3 text-sm text-gray-400 hover:text-orange-400 transition">
-                <MapPin className="w-4 h-4 mt-1 text-orange-500 shrink-0" />
-                <span style={lf}>{t.address}</span>
+              <li>
+                <div className="flex items-start gap-3" dir={t.dir}>
+                  <div className="w-8 h-8 rounded-lg bg-green-500/10 border border-green-500/20 flex items-center justify-center shrink-0 mt-0.5">
+                    <MapPin className="w-4 h-4 text-green-500" />
+                  </div>
+                  <div>
+                    <div className="text-xs text-gray-400 mb-0.5 font-medium" style={lf}>
+                      {isUrdu ? "پتہ" : "Address"}
+                    </div>
+                    <span className="text-sm text-gray-400" style={lf}>{t.address}</span>
+                  </div>
+                </div>
               </li>
-              <li className="flex items-start gap-3 text-sm text-gray-400 hover:text-orange-400 transition">
-                <Mail className="w-4 h-4 mt-1 text-orange-500 shrink-0" />
-                <a href="mailto:support@rozgarhub.pk" className="hover:underline">support@rozgarhub.pk</a>
+
+              <li>
+                <a href="mailto:usersupportrozgarhub@gmail.com" className="flex items-start gap-3 group" dir={t.dir}>
+                  <div className="w-8 h-8 rounded-lg bg-blue-500/10 border border-blue-500/20 flex items-center justify-center shrink-0 mt-0.5 group-hover:bg-blue-500/20 transition-colors">
+                    <Mail className="w-4 h-4 text-blue-400" />
+                  </div>
+                  <div>
+                    <div className="text-xs text-gray-400 mb-0.5 font-medium" style={lf}>
+                      {isUrdu ? "ای میل" : "Email"}
+                    </div>
+                    <span className="text-sm text-gray-400 group-hover:text-blue-400 transition-colors break-all">
+                      usersupportrozgarhub@gmail.com
+                    </span>
+                  </div>
+                </a>
               </li>
-              <li className="flex items-start gap-3 text-sm text-gray-400 hover:text-orange-400 transition">
-                <Phone className="w-4 h-4 mt-1 text-orange-500 shrink-0" />
-                <a href="tel:+923001234567" className="hover:underline">+92 300 1234567</a>
+
+              <li>
+                <a href="tel:+923211009059" className="flex items-start gap-3 group" dir={t.dir}>
+                  <div className="w-8 h-8 rounded-lg bg-green-500/10 border border-green-500/20 flex items-center justify-center shrink-0 mt-0.5 group-hover:bg-green-500/20 transition-colors">
+                    <Phone className="w-4 h-4 text-green-500" />
+                  </div>
+                  <div>
+                    <div className="text-xs text-gray-400 mb-0.5 font-medium" style={lf}>
+                      {isUrdu ? "فون" : "Phone"}
+                    </div>
+                    <span className="text-sm text-gray-400 group-hover:text-green-400 transition-colors">
+                      +92 321 1009059
+                    </span>
+                  </div>
+                </a>
               </li>
             </ul>
           </div>
-
         </div>
 
-        {/* Bottom Bar */}
-        <div className="pt-8 border-t border-white/10">
-          <div className="flex flex-col md:flex-row items-center justify-between gap-4">
-            <p className="text-sm text-gray-500 text-center md:text-left" style={lf}>
-              © {currentYear} Rozgar Hub. {t.copyright}
-            </p>
-            <div className="flex items-center gap-6 text-sm text-gray-500">
-              {t.bottomLinks.map((link) => (
-                <a key={link.label} href={link.href} className="hover:text-orange-400 transition" style={lf}>
-                  {link.label}
-                </a>
-              ))}
-            </div>
-          </div>
+        {/* Divider */}
+        <div className="h-px bg-gradient-to-r from-transparent via-white/10 to-transparent mb-8" />
+
+        {/* Bottom bar */}
+        <div className="flex flex-col md:flex-row items-center justify-between gap-4">
+          <p className="text-xs text-gray-400 text-center" style={lf}>
+            © {currentYear} Rozgar Hub. {t.copyright}
+          </p>
         </div>
 
       </div>

@@ -90,7 +90,8 @@ const connectDB  = require("./config/db");
 // ─────────────────────────────────────────────────────────────
 require("./models/User");
 require("./models/Job");
-require("./models/Application");     // ← Ye line add karein
+require("./models/Application");
+require("./models/JobTitle");
 
 const app    = express();
 const server = http.createServer(app);
@@ -107,8 +108,22 @@ const io = new Server(server, {
 // Socket Handler
 require("./socket/socketHandler")(io);
 
-// Database Connection
-connectDB();
+// Database Connection + auto-seed job titles
+connectDB().then(async () => {
+  try {
+    const JobTitle = require("./models/JobTitle");
+    const count = await JobTitle.countDocuments();
+    if (count === 0) {
+      const { seed } = require("./controllers/jobTitle.controller");
+      // call seed logic directly (not via HTTP)
+      const JobTitleCtrl = require("./controllers/jobTitle.controller");
+      const fakeRes = { json: (d) => console.log("✅ Job titles seeded:", d.message) };
+      await JobTitleCtrl.seed({}, fakeRes);
+    }
+  } catch (e) {
+    console.error("Job title seed error:", e.message);
+  }
+}).catch(() => {});
 
 // Security
 app.use(helmet({
@@ -118,6 +133,7 @@ app.use(helmet({
 // CORS
 app.use(cors({
   origin: "http://localhost:3000",
+  methods: ["GET", "POST", "PUT", "PATCH", "DELETE"],
   credentials: true,
 }));
 
@@ -126,13 +142,15 @@ app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
 // Routes
-app.use("/api/auth",    require("./routes/auth.routes"));
-app.use("/api/jobs",    require("./routes/job.routes"));
-app.use("/api/workers", require("./routes/worker.routes"));
-app.use("/api/chat",    require("./routes/chat.routes"));
-app.use("/api/ai",      require("./routes/ai.routes"));
-app.use("/api/admin",   require("./routes/admin.routes"));
+app.use("/api/auth",         require("./routes/auth.routes"));
+app.use("/api/jobs",         require("./routes/job.routes"));
+app.use("/api/workers",      require("./routes/worker.routes"));
+app.use("/api/chat",         require("./routes/chat.routes"));
+app.use("/api/ai",           require("./routes/ai.routes"));
+app.use("/api/admin",        require("./routes/admin.routes"));
 app.use("/api/job-requests", require("./routes/jobRequest.routes"));
+app.use("/api/job-titles",   require("./routes/jobTitle.routes"));
+app.use("/api/notifications", require("./routes/notification.routes"));
 
 // Health Check
 app.get("/", (req, res) => {

@@ -2,6 +2,9 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
+import { GoogleOAuthProvider, GoogleLogin } from "@react-oauth/google";
+
+const GOOGLE_CLIENT_ID = "860525218853-jsbg92t7o6gsoa8fj7ad338mr6tff6s4.apps.googleusercontent.com";
 
 const translations = {
   en: {
@@ -19,6 +22,9 @@ const translations = {
     registerEmployer: "Register as Employer",
     notReachable: "Server not reachable",
     loginFailed: "Login failed",
+    orContinueWith: "Or continue with",
+    googleError: "Google login failed. Please try again.",
+    googleNoAccount: "No account found for this Google email. Please register first.",
   },
   ur: {
     welcome: "خوش آمدید! براہ کرم اپنے اکاؤنٹ میں داخل ہوں",
@@ -35,6 +41,9 @@ const translations = {
     registerEmployer: "آجر کے طور پر رجسٹر کریں",
     notReachable: "سرور تک رسائی نہیں",
     loginFailed: "لاگ ان ناکام",
+    orContinueWith: "یا اس طرح جاری رکھیں",
+    googleError: "گوگل لاگ ان ناکام۔ دوبارہ کوشش کریں۔",
+    googleNoAccount: "اس گوگل ای میل کا کوئی اکاؤنٹ نہیں ملا۔ پہلے رجسٹر کریں۔",
   },
 };
 
@@ -80,10 +89,34 @@ export default function LoginPage() {
     }
   }
 
+  async function handleGoogleSuccess(credentialResponse) {
+    setIsLoading(true);
+    try {
+      const res = await fetch("http://localhost:5000/api/auth/google", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ credential: credentialResponse.credential }),
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        alert(data.error === "No account found." ? t.googleNoAccount : (data.error || t.googleError));
+        setIsLoading(false);
+        return;
+      }
+      localStorage.setItem("token", data.token);
+      localStorage.setItem("user", JSON.stringify(data.user));
+      if (data.user.role === "employer") router.push("/employer/profile");
+      else router.push("/worker/profile");
+    } catch {
+      alert(t.googleError);
+      setIsLoading(false);
+    }
+  }
+
   return (
     <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-[#1e3a8a] via-[#172554] to-[#0f172a] px-4 py-12">
       {/* Decorative Elements */}
-      <div className="absolute top-20 right-20 w-72 h-72 bg-orange-500/10 rounded-full blur-3xl pointer-events-none"></div>
+      <div className="absolute top-20 right-20 w-72 h-72 bg-green-500/10 rounded-full blur-3xl pointer-events-none"></div>
       <div className="absolute bottom-20 left-10 w-96 h-96 bg-blue-500/10 rounded-full blur-3xl pointer-events-none"></div>
 
       {/* Language Toggle */}
@@ -92,7 +125,7 @@ export default function LoginPage() {
           onClick={() => setLang("en")}
           className={`px-3 py-1 rounded-lg font-semibold transition-all ${
             lang === "en"
-              ? "bg-orange-500 text-white"
+              ? "bg-green-500 text-white"
               : "bg-white/10 text-gray-300 hover:bg-white/20"
           }`}
         >
@@ -102,7 +135,7 @@ export default function LoginPage() {
           onClick={() => setLang("ur")}
           className={`px-3 py-1 rounded-lg font-semibold transition-all ${
             lang === "ur"
-              ? "bg-orange-500 text-white"
+              ? "bg-green-500 text-white"
               : "bg-white/10 text-gray-300 hover:bg-white/20"
           }`}
         >
@@ -114,10 +147,10 @@ export default function LoginPage() {
         {/* Logo Section */}
         <div className="text-center mb-8">
           <div className="inline-flex items-center gap-3 mb-4">
-            <div className="w-12 h-12 bg-gradient-to-br from-orange-500 to-orange-600 rounded-lg flex items-center justify-center">
+            <div className="w-12 h-12 bg-gradient-to-br from-green-500 to-green-600 rounded-lg flex items-center justify-center">
               <span className="text-white font-bold text-2xl">R</span>
             </div>
-            <span className="text-white font-bold text-3xl">Rozgar Hub</span>
+            <span className="text-white font-bold text-3xl">Rozgar <span className="text-green-400">Hub</span></span>
           </div>
           <p className="text-gray-300 text-sm">{t.welcome}</p>
         </div>
@@ -145,7 +178,7 @@ export default function LoginPage() {
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
                   required
-                  className="w-full pl-10 pr-4 py-3 bg-gray-50 border border-gray-200 rounded-lg text-gray-800 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-transparent transition-all"
+                  className="w-full pl-10 pr-4 py-3 bg-gray-50 border border-gray-200 rounded-lg text-gray-800 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent transition-all"
                 />
               </div>
             </div>
@@ -168,7 +201,7 @@ export default function LoginPage() {
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
                   required
-                  className="w-full pl-10 pr-12 py-3 bg-gray-50 border border-gray-200 rounded-lg text-gray-800 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-transparent transition-all"
+                  className="w-full pl-10 pr-12 py-3 bg-gray-50 border border-gray-200 rounded-lg text-gray-800 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent transition-all"
                 />
                 <button
                   type="button"
@@ -194,11 +227,11 @@ export default function LoginPage() {
               <label className="flex items-center text-gray-600 cursor-pointer">
                 <input
                   type="checkbox"
-                  className="w-4 h-4 text-orange-500 bg-white/5 border-white/20 rounded focus:ring-orange-500 focus:ring-2"
+                  className="w-4 h-4 text-green-500 bg-white/5 border-white/20 rounded focus:ring-green-500 focus:ring-2"
                 />
                 <span className="ml-2">{t.rememberMe}</span>
               </label>
-              <Link href="/auth/forgot-password" className="text-orange-400 hover:text-orange-300 transition-colors">
+              <Link href="/auth/forgot-password" className="text-green-400 hover:text-green-300 transition-colors">
                 {t.forgotPassword}
               </Link>
             </div>
@@ -207,7 +240,7 @@ export default function LoginPage() {
             <button
               type="submit"
               disabled={isLoading}
-              className="w-full bg-gradient-to-r from-orange-500 to-orange-600 text-white font-semibold py-3 px-4 rounded-lg hover:from-orange-600 hover:to-orange-700 focus:outline-none focus:ring-2 focus:ring-orange-500 focus:ring-offset-2 focus:ring-offset-transparent transition-all duration-300 shadow-lg shadow-orange-500/30 hover:shadow-orange-500/50 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+              className="w-full bg-gradient-to-r from-green-500 to-green-600 text-white font-semibold py-3 px-4 rounded-lg hover:from-green-600 hover:to-green-700 focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-offset-2 focus:ring-offset-transparent transition-all duration-300 shadow-lg shadow-green-500/30 hover:shadow-green-500/50 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
             >
               {isLoading ? (
                 <>
@@ -228,20 +261,45 @@ export default function LoginPage() {
             </button>
           </form>
 
+          {/* Google Login */}
+          {GOOGLE_CLIENT_ID && (
+            <div className="mt-5">
+              <div className="flex items-center gap-3 mb-4">
+                <div className="flex-1 h-px bg-gray-200"></div>
+                <span className="text-xs text-gray-400 font-medium uppercase tracking-wide">{t.orContinueWith}</span>
+                <div className="flex-1 h-px bg-gray-200"></div>
+              </div>
+              <GoogleOAuthProvider clientId={GOOGLE_CLIENT_ID}>
+                <div className="flex justify-center">
+                  <GoogleLogin
+                    onSuccess={handleGoogleSuccess}
+                    onError={() => alert(t.googleError)}
+                    width="368"
+                    size="large"
+                    theme="outline"
+                    text="continue_with"
+                    shape="rectangular"
+                    logo_alignment="left"
+                  />
+                </div>
+              </GoogleOAuthProvider>
+            </div>
+          )}
+
           {/* Footer */}
           <div className="mt-6 text-center text-sm text-gray-500">
             <p>{t.noAccount}</p>
             <div className="flex gap-2 mt-3 justify-center">
               <Link
                 href="/auth/register/worker"
-                className="text-orange-400 hover:text-orange-300 transition-colors font-semibold"
+                className="text-green-400 hover:text-green-300 transition-colors font-semibold"
               >
                 {t.registerWorker}
               </Link>
               <span className="text-gray-300">|</span>
               <Link
                 href="/auth/register/employer"
-                className="text-orange-400 hover:text-orange-300 transition-colors font-semibold"
+                className="text-green-400 hover:text-green-300 transition-colors font-semibold"
               >
                 {t.registerEmployer}
               </Link>

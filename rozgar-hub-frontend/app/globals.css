@@ -26,3 +26,404 @@ body {
 html {
   scroll-behavior: smooth;
 }
+
+/* ═══════════════════════════════════════════════════════════
+   GLOBAL RESPONSIVE UTILITIES
+═══════════════════════════════════════════════════════════ */
+
+/* ── Spin animation used by loading indicators ── */
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+@keyframes slideUp {
+  from { transform: translateY(24px); opacity: 0; }
+  to   { transform: translateY(0);    opacity: 1; }
+}
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+
+/* ── Touch-friendly tap targets ── */
+button, a, [role="button"] {
+  -webkit-tap-highlight-color: transparent;
+  touch-action: manipulation;
+}
+
+/* ── Prevent font inflation on iOS ── */
+html {
+  -webkit-text-size-adjust: 100%;
+}
+
+/* ── Images are always responsive by default ── */
+img {
+  max-width: 100%;
+  height: auto;
+}
+
+/* ─────────────────────────────────────────────
+   DASHBOARD LAYOUT — sidebar + main
+───────────────────────────────────────────── */
+.dashboard-layout {
+  display: flex;
+  height: 100vh;
+  overflow: hidden;
+}
+
+/* Desktop sidebar */
+.sidebar {
+  width: 240px;
+  flex-shrink: 0;
+  transition: width 0.25s ease, transform 0.25s ease;
+}
+
+/* Main content area */
+.main-pad {
+  flex: 1;
+  overflow-y: auto;
+  padding: 24px 28px;
+}
+
+/* ─────────────────────────────────────────────
+   TABLET  ≤ 1024px
+───────────────────────────────────────────── */
+@media (max-width: 1024px) {
+  .sidebar {
+    width: 200px;
+  }
+
+  .main-pad {
+    padding: 18px 20px;
+  }
+
+  /* Admin table — compress columns */
+  .admin-table-row {
+    grid-template-columns: 2fr 1.8fr 90px 160px 100px 140px !important;
+    font-size: 13px;
+  }
+
+  /* Category grid — 4 per row instead of 5 */
+  .form-5col {
+    grid-template-columns: repeat(4, 1fr) !important;
+  }
+}
+
+/* ─────────────────────────────────────────────
+   MOBILE  ≤ 768px
+───────────────────────────────────────────── */
+@media (max-width: 768px) {
+  /* Sidebar becomes an off-canvas overlay */
+  .sidebar {
+    position: fixed;
+    inset: 0 auto 0 0;
+    z-index: 300;
+    transform: translateX(-100%);
+    width: 260px !important;
+    box-shadow: 4px 0 24px rgba(0,0,0,.18);
+  }
+  .sidebar.open {
+    transform: translateX(0);
+  }
+
+  /* Overlay backdrop when sidebar is open */
+  .sidebar-backdrop {
+    display: none;
+    position: fixed;
+    inset: 0;
+    background: rgba(0,0,0,.45);
+    z-index: 299;
+  }
+  .sidebar-backdrop.visible {
+    display: block;
+  }
+
+  /* Main content takes full width */
+  .main-pad {
+    padding: 14px 14px;
+    width: 100%;
+  }
+
+  /* Hero cards — stack vertically */
+  .hero-stats-grid {
+    grid-template-columns: 1fr 1fr !important;
+    gap: 8px !important;
+  }
+
+  /* Form layout — 1 column on mobile */
+  .form-2col {
+    grid-template-columns: 1fr !important;
+  }
+  .form-5col {
+    grid-template-columns: repeat(3, 1fr) !important;
+  }
+
+  /* Profile section tabs — scrollable */
+  .section-nav {
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: none;
+    gap: 6px !important;
+  }
+  .section-nav::-webkit-scrollbar { display: none; }
+
+  /* Admin table — card layout */
+  .admin-table-header {
+    display: none !important;
+  }
+  .admin-table-row {
+    grid-template-columns: 1fr !important;
+    gap: 8px !important;
+    padding: 14px !important;
+    border-radius: 12px !important;
+    margin-bottom: 10px !important;
+    box-shadow: 0 2px 10px rgba(0,0,0,0.07) !important;
+  }
+
+  /* Nav bar — show hamburger, hide text labels */
+  .nav-label {
+    display: none !important;
+  }
+  .nav-icon-only {
+    display: flex !important;
+  }
+
+  /* Modals — full-screen on mobile */
+  .modal-box {
+    max-width: 100% !important;
+    width: 100% !important;
+    border-radius: 20px 20px 0 0 !important;
+    position: fixed !important;
+    bottom: 0 !important;
+    left: 0 !important;
+    right: 0 !important;
+    top: auto !important;
+    max-height: 90vh;
+    overflow-y: auto;
+  }
+
+  /* Cards — reduce padding */
+  .card-pad {
+    padding: 14px 16px !important;
+  }
+
+  /* Responsive text scale */
+  h1 { font-size: clamp(20px, 5vw, 32px) !important; }
+  h2 { font-size: clamp(18px, 4vw, 26px) !important; }
+  h3 { font-size: clamp(16px, 3.5vw, 22px) !important; }
+
+  /* Request/offer cards — full width buttons */
+  .action-row {
+    flex-direction: column !important;
+    gap: 8px !important;
+  }
+  .action-row button {
+    width: 100% !important;
+  }
+
+  /* Worker profile hero — compact */
+  .profile-hero-inner {
+    flex-direction: column !important;
+    align-items: center !important;
+    text-align: center !important;
+  }
+
+  /* Progress steps — 1 column */
+  .progress-steps {
+    gap: 8px !important;
+  }
+
+  /* Job map — shorter on mobile */
+  .leaflet-container {
+    height: 180px !important;
+  }
+
+  /* Inline document pills — wrap */
+  .doc-pills {
+    flex-wrap: wrap !important;
+    gap: 5px !important;
+  }
+}
+
+/* ─────────────────────────────────────────────
+   SMALL MOBILE  ≤ 480px
+───────────────────────────────────────────── */
+@media (max-width: 480px) {
+  .form-5col {
+    grid-template-columns: repeat(2, 1fr) !important;
+  }
+
+  .hero-stats-grid {
+    grid-template-columns: 1fr !important;
+  }
+
+  .main-pad {
+    padding: 10px 10px;
+  }
+
+  /* Notification bell dropdown — full width */
+  .notif-dropdown {
+    right: -10px !important;
+    width: calc(100vw - 20px) !important;
+  }
+}
+
+/* ─────────────────────────────────────────────
+   LANDING PAGE RESPONSIVE
+───────────────────────────────────────────── */
+@media (max-width: 768px) {
+  .landing-hero {
+    padding: 40px 16px !important;
+    text-align: center !important;
+  }
+  .landing-hero h1 {
+    font-size: clamp(26px, 7vw, 48px) !important;
+  }
+  .landing-grid-3 {
+    grid-template-columns: 1fr !important;
+  }
+  .landing-grid-2 {
+    grid-template-columns: 1fr !important;
+  }
+  .landing-nav {
+    padding: 12px 16px !important;
+  }
+  .landing-nav-links {
+    display: none !important;
+  }
+}
+
+/* ─────────────────────────────────────────────
+   AUTH PAGES RESPONSIVE
+───────────────────────────────────────────── */
+@media (max-width: 600px) {
+  .auth-card {
+    padding: 24px 18px !important;
+    margin: 16px !important;
+    border-radius: 16px !important;
+  }
+  .auth-grid-2 {
+    grid-template-columns: 1fr !important;
+  }
+}
+
+/* ─────────────────────────────────────────────
+   JOB TRACKER RESPONSIVE
+───────────────────────────────────────────── */
+@media (max-width: 768px) {
+  .tracker-layout {
+    flex-direction: column !important;
+  }
+  .tracker-map {
+    height: 220px !important;
+  }
+  .tracker-steps {
+    padding: 14px !important;
+  }
+  .tracker-contact-row {
+    flex-direction: column !important;
+    gap: 8px !important;
+  }
+  .tracker-contact-row a,
+  .tracker-contact-row button {
+    width: 100% !important;
+    justify-content: center !important;
+  }
+}
+
+/* ─────────────────────────────────────────────
+   UTILITY: hide/show by breakpoint
+───────────────────────────────────────────── */
+.mobile-only { display: none !important; }
+.desktop-only { display: flex !important; }
+
+@media (max-width: 768px) {
+  .mobile-only  { display: flex !important; }
+  .desktop-only { display: none !important; }
+}
+
+/* Smooth scrolling on iOS */
+.scroll-smooth {
+  -webkit-overflow-scrolling: touch;
+  scroll-behavior: smooth;
+}
+
+/* Input fields — prevent zoom on iOS */
+input[type="text"],
+input[type="email"],
+input[type="password"],
+input[type="number"],
+input[type="tel"],
+select,
+textarea {
+  font-size: 16px !important; /* prevents iOS auto-zoom */
+}
+
+/* ─────────────────────────────────────────────
+   PROFILE PAGE RESPONSIVE PATCHES
+───────────────────────────────────────────── */
+@media (max-width: 768px) {
+  /* Worker / Employer profile hero stats */
+  .profile-stats {
+    grid-template-columns: 1fr 1fr !important;
+    gap: 8px !important;
+  }
+
+  /* Profile section nav buttons */
+  .profile-sec-nav {
+    flex-wrap: nowrap !important;
+    overflow-x: auto !important;
+    -webkit-overflow-scrolling: touch !important;
+    scrollbar-width: none !important;
+    padding-bottom: 4px !important;
+  }
+  .profile-sec-nav::-webkit-scrollbar { display: none; }
+  .profile-sec-nav button {
+    flex-shrink: 0 !important;
+    font-size: 12px !important;
+    padding: 8px 12px !important;
+  }
+
+  /* Availability modal — full screen */
+  .avail-modal {
+    padding: 18px !important;
+  }
+
+  /* Job request cards */
+  .job-card-inner {
+    flex-direction: column !important;
+  }
+  .job-card-actions {
+    flex-direction: column !important;
+    gap: 8px !important;
+  }
+  .job-card-actions button {
+    width: 100% !important;
+  }
+}
+
+/* ─────────────────────────────────────────────
+   ADMIN PORTAL RESPONSIVE PATCHES
+───────────────────────────────────────────── */
+@media (max-width: 768px) {
+  .admin-stats {
+    grid-template-columns: 1fr 1fr !important;
+    gap: 10px !important;
+  }
+  .admin-filter-row {
+    flex-direction: column !important;
+    gap: 8px !important;
+  }
+  .admin-filter-row input,
+  .admin-filter-row select {
+    width: 100% !important;
+  }
+  /* User detail modal — full screen */
+  .user-modal {
+    max-width: 100% !important;
+    border-radius: 20px 20px 0 0 !important;
+    position: fixed !important;
+    bottom: 0 !important;
+    top: auto !important;
+    max-height: 92vh !important;
+  }
+}

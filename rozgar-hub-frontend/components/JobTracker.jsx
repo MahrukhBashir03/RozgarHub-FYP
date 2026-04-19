@@ -588,7 +588,7 @@ export default function JobTracker({ role, job, worker, employer, agreedPrice, s
 
       {/* ═══ CHAT PANEL ═══ */}
       {showChat && (
-        <div style={{ position:"fixed", inset:0, background:"rgba(0,0,0,.5)", display:"flex", alignItems:"flex-end", justifyContent:"flex-end", zIndex:400, padding:20, backdropFilter:"blur(4px)" }}>
+        <div style={{ position:"fixed", inset:0, background:"rgba(0,0,0,.5)", display:"flex", alignItems:"flex-end", justifyContent:"flex-end", zIndex:1500, padding:20, backdropFilter:"blur(4px)" }}>
           <div style={{ background:"#fff", borderRadius:24, width:"100%", maxWidth:420, height:"80vh", display:"flex", flexDirection:"column", boxShadow:"0 24px 60px rgba(0,0,0,.3)", animation:"slideUp2 .3s ease-out" }}>
             {/* Chat header */}
             <div style={{ background:"linear-gradient(135deg,#0f172a,#1e3a5f)", padding:"18px 20px", borderRadius:"24px 24px 0 0", display:"flex", alignItems:"center", justifyContent:"space-between" }}>

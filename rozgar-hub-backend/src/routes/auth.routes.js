@@ -9,17 +9,22 @@ const {
   resendOTP,
   resendEmailOTP,
   login,
+  googleLogin,
   forgotPassword,
   resetPassword,
   getProfile,
   uploadDriverLicense,
-  updateProfile,          // ← make sure this is exported from auth.controller.js
+  updateProfile,
+  changePassword,
+  updateProfilePhoto,
+  updateSkills,
 } = require("../controllers/auth.controller");
 
 const {
   uploadWorkerDocs,
   uploadEmployerDocs,
   uploadDriverLicense: uploadDriverLicenseMiddleware,
+  uploadProfilePhoto: uploadProfilePhotoMiddleware,
 } = require("../middleware/upload.middleware");
 const { detectFraud } = require("../middleware/fraud.middleware");
 const { verifyToken } = require("../middleware/auth.middleware");
@@ -72,6 +77,7 @@ router.post("/resend-email-otp", otpLimiter, resendEmailOTP);
 
 // ── Login ─────────────────────────────────────────────────────
 router.post("/login", loginLimiter, login);
+router.post("/google", googleLogin);
 
 // ── Password Reset ────────────────────────────────────────────
 router.post("/forgot-password", otpLimiter, forgotPassword);
@@ -86,6 +92,12 @@ router.get("/me",      verifyToken, getProfile);
 // Body: { availabilityPosted, firstJobPosted, … }
 router.patch("/update-profile", verifyToken, updateProfile);
 
+// ── Change Password ───────────────────────────────────────────
+router.post("/change-password", verifyToken, changePassword);
+
+// ── Update Profile Photo ──────────────────────────────────────
+router.post("/update-profile-photo", verifyToken, uploadProfilePhotoMiddleware, updateProfilePhoto);
+
 // ── Driver License Upload ─────────────────────────────────────
 router.post(
   "/upload-driver-license",
@@ -93,5 +105,8 @@ router.post(
   uploadDriverLicenseMiddleware,
   uploadDriverLicense
 );
+
+// ── Worker Skills ─────────────────────────────────────────────
+router.patch("/update-skills", verifyToken, updateSkills);
 
 module.exports = router;

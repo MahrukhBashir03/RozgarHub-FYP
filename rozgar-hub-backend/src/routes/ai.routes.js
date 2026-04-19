@@ -29,27 +29,54 @@ router.post("/generate-description", async (req, res) => {
   }
 });
 
-// ─── Smart Job Description Auto-Fill ─────────────────────────────────────────
+// ─── Smart Job Description Auto-Fill (NLP Parsing) ───────────────────────────
 router.post("/parse-job", async (req, res) => {
   const { description } = req.body;
   if (!description) return res.status(400).json({ error: "Description required" });
-  const prompt = `You are a job parser for RozgarHub, a Pakistani blue-collar job portal.\nExtract information from this job description and return ONLY valid JSON, nothing else.\n\nJob description: "${description}"\n\nReturn exactly this format:\n{\n  "skills": ["skill1", "skill2"],\n  "budget_estimate": "PKR range per day",\n  "urgency": "low | medium | high",\n  "category": "job category in one word",\n  "location": "city or area name, or empty string if not mentioned"\n}`;
+
+  const prompt = `You are a job parser for RozgarHub, a Pakistani blue-collar job portal.
+Extract information from this job description and return ONLY valid JSON, nothing else.
+
+Job description: "${description}"
+
+Return EXACTLY this JSON format with no extra text:
+{
+  "title": "short job title in 3-6 words describing the work",
+  "category": "ONE of: electrician | plumber | carpenter | painter | cleaner | driver | mason | welder | tailor | gardener | cook | security | other",
+  "location": "city or area name mentioned, or empty string if not mentioned",
+  "duration": "estimated time to complete the job e.g. 2 hours, 1 day, 3 days, 1 week — or empty string if unclear",
+  "budget": "numeric estimate in PKR as integer only (no text), or 0 if not mentioned",
+  "urgency": "one of: 1_hour | today | this_week | flexible — pick based on context clues like urgent/jaldi/aaj/this week",
+  "skills": ["relevant skill 1", "relevant skill 2"]
+}
+
+Rules:
+- title must describe the actual work task, e.g. "Fix bathroom pipe leak" or "Paint three rooms"
+- budget should be a reasonable PKR estimate for Pakistani market if mentioned, otherwise 0
+- If urgency words like "urgent", "jaldi", "abhi" are used, set urgency to 1_hour
+- If "aaj" or "today" is mentioned, set urgency to today`;
+
   try {
     const response = await fetch("https://api.groq.com/openai/v1/chat/completions", {
       method: "POST",
       headers: { "Content-Type": "application/json", "Authorization": `Bearer ${process.env.GROQ_API_KEY}` },
       body: JSON.stringify({
-        model: "llama-3.1-8b-instant", max_tokens: 200,
+        model: "llama-3.1-8b-instant",
+        max_tokens: 400,
+        temperature: 0.1,
         messages: [
-          { role: "system", content: "You are a JSON extractor. You only return valid JSON. No explanation, no markdown, no extra text." },
+          { role: "system", content: "You are a JSON extractor for a Pakistani blue-collar job portal. You ONLY return valid JSON. No explanation, no markdown, no extra text. Every field must be present." },
           { role: "user", content: prompt }
         ]
       })
     });
     const data = await response.json();
-    const text = data?.choices?.[0]?.message?.content;
-    if (!text) return res.status(500).json({ error: "AI ne kuch return nahi kiya", raw: data });
-    const parsed = JSON.parse(text.trim());
+    let text = data?.choices?.[0]?.message?.content;
+    if (!text) return res.status(500).json({ error: "AI returned empty response", raw: data });
+
+    // Strip markdown code fences if present
+    text = text.trim().replace(/^```(?:json)?/, "").replace(/```$/, "").trim();
+    const parsed = JSON.parse(text);
     res.json(parsed);
   } catch (err) {
     console.error("Parse-job Error:", err.message);

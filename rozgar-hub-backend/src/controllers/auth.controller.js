@@ -1,6 +1,7 @@
 // const User = require("../models/User");
 // const jwt = require("jsonwebtoken");
 // const crypto = require("crypto");
+// const { OAuth2Client } = require("google-auth-library");
 // const { sendOTPEmail } = require("../utils/sendEmail");
 // const { validatePassword } = require("../utils/passwordValidator");
 // const { buildProfileUpdate } = require("../utils/profileProgress");
@@ -9,6 +10,8 @@
 
 // const generateToken = (userId) =>
 //   jwt.sign({ id: userId }, process.env.JWT_SECRET, { expiresIn: "7d" });
+
+// const googleClient = new OAuth2Client(process.env.GOOGLE_CLIENT_ID);
 
 // // ─────────────────────────────────────────────────────────────
 // // WORKER REGISTER
@@ -64,12 +67,15 @@
 //     const emailOtp = generateOTP();
 
 //     // ── Extract Cloudinary URLs from uploaded files ──
+//     // multer-storage-cloudinary stores the URL in .path, not .secure_url
 //     const documents = {
-//       profilePhoto: req.files.profilePhoto[0].secure_url,
-//       cnicFront: req.files.cnicFront[0].secure_url,
-//       cnicBack: req.files.cnicBack[0].secure_url,
+//       profilePhoto: req.files.profilePhoto[0].path,
+//       cnicFront:    req.files.cnicFront[0].path,
+//       cnicBack:     req.files.cnicBack[0].path,
 //       drivingLicense: null,
 //     };
+
+//     console.log("Documents to save:", documents); // verify URLs are real
 
 //     // ── Initialize profile progress ──
 //     const profileProgress = {
@@ -160,14 +166,16 @@
 //     const emailOtp = generateOTP();
 
 //     // ── Extract Cloudinary URLs from uploaded files ──
+//     // multer-storage-cloudinary stores the URL in .path, not .secure_url
 //     const documents = {
-//       profilePhoto: req.files.profilePhoto[0].secure_url,
-//       cnicFront: req.files.cnicFront[0].secure_url,
-//       cnicBack: req.files.cnicBack[0].secure_url,
+//       profilePhoto: req.files.profilePhoto[0].path,
+//       cnicFront:    req.files.cnicFront[0].path,
+//       cnicBack:     req.files.cnicBack[0].path,
 //       drivingLicense: null,
 //     };
 
-  
+//     console.log("Documents to save:", documents); // verify URLs are real
+
 //     const profileProgress = {
 //       profilePhoto: true,
 //       documents: true,
@@ -407,7 +415,7 @@
 // exports.updateProfile = async (req, res) => {
 //   try {
 //     const {
-//       name, phone, city, address, gender, age,
+//       name, email, phone, city, address, gender, age,
 //       cnicNumber, trade, experience, hourlyRate, bio,
 //       availability, skills, companyName, businessType, howMany,
 //       documents, profileComplete, profileScore,
@@ -416,24 +424,31 @@
 //     const currentUser = await User.findById(req.user.id);
 //     if (!currentUser) return res.status(404).json({ error: "User not found." });
 
+//     // Check email uniqueness if changing email
+//     if (email && email.toLowerCase() !== currentUser.email) {
+//       const emailTaken = await User.findOne({ email: email.toLowerCase(), _id: { $ne: req.user.id } });
+//       if (emailTaken) return res.status(409).json({ error: "Email already in use." });
+//     }
+
 //     const updatePayload = {
-//       ...(name        && { name }),
-//       ...(phone       && { phone }),
-//       ...(city        && { city }),
-//       ...(address     && { address }),
-//       ...(gender      && { gender }),
-//       ...(age         && { age }),
-//       ...(cnicNumber  && { cnicNumber }),
-//       ...(trade       && { trade }),
-//       ...(experience  && { experience }),
-//       ...(hourlyRate  && { hourlyRate }),
-//       ...(bio         && { bio }),
+//       ...(name         && { name }),
+//       ...(email        && { email: email.toLowerCase() }),
+//       ...(phone        && { phone }),
+//       ...(city         && { city }),
+//       ...(address      && { address }),
+//       ...(gender       && { gender }),
+//       ...(age          && { age }),
+//       ...(cnicNumber   && { cnicNumber }),
+//       ...(trade        && { trade }),
+//       ...(experience   && { experience }),
+//       ...(hourlyRate   && { hourlyRate }),
+//       ...(bio          && { bio }),
 //       ...(availability && { availability }),
-//       ...(skills      && { skills }),
-//       ...(companyName && { companyName }),
+//       ...(skills       && { skills }),
+//       ...(companyName  && { companyName }),
 //       ...(businessType && { businessType }),
-//       ...(howMany     && { howMany }),
-//       ...(documents   && { documents }),
+//       ...(howMany      && { howMany }),
+//       ...(documents    && { documents }),
 //       ...(profileScore !== undefined && { profileScore }),
 //       profileComplete: profileComplete ?? true,
 //     };
@@ -558,6 +573,98 @@
 // };
 
 // // ─────────────────────────────────────────────────────────────
+// // CHANGE PASSWORD  (POST /api/auth/change-password)
+// // ─────────────────────────────────────────────────────────────
+// exports.changePassword = async (req, res) => {
+//   try {
+//     const { currentPassword, newPassword } = req.body;
+//     if (!currentPassword || !newPassword) {
+//       return res.status(400).json({ error: "Current and new password are required." });
+//     }
+//     if (newPassword.length < 6) {
+//       return res.status(400).json({ error: "New password must be at least 6 characters." });
+//     }
+//     const user = await User.findById(req.user.id);
+//     if (!user) return res.status(404).json({ error: "User not found." });
+//     if (currentPassword !== user.password) {
+//       return res.status(401).json({ error: "Current password is incorrect." });
+//     }
+//     user.password = newPassword;
+//     await user.save({ validateBeforeSave: false });
+//     res.status(200).json({ message: "Password changed successfully." });
+//   } catch (err) {
+//     console.error("changePassword error:", err.message);
+//     res.status(500).json({ error: err.message });
+//   }
+// };
+
+// // ─────────────────────────────────────────────────────────────
+// // UPDATE PROFILE PHOTO  (POST /api/auth/update-profile-photo)
+// // ─────────────────────────────────────────────────────────────
+// exports.updateProfilePhoto = async (req, res) => {
+//   try {
+//     if (!req.file) {
+//       return res.status(400).json({ error: "Profile photo is required." });
+//     }
+//     const photoUrl = req.file.path;
+//     const user = await User.findByIdAndUpdate(
+//       req.user.id,
+//       { $set: { "documents.profilePhoto": photoUrl } },
+//       { new: true, select: "-password -otp -otpExpiry" }
+//     );
+//     if (!user) return res.status(404).json({ error: "User not found." });
+//     res.status(200).json({ message: "Profile photo updated.", user });
+//   } catch (err) {
+//     console.error("updateProfilePhoto error:", err.message);
+//     res.status(500).json({ error: err.message });
+//   }
+// };
+
+// // ─────────────────────────────────────────────────────────────
+// // GOOGLE LOGIN  (POST /api/auth/google)
+// // ─────────────────────────────────────────────────────────────
+// exports.googleLogin = async (req, res) => {
+//   try {
+//     const { credential } = req.body;
+//     if (!credential) return res.status(400).json({ error: "Google credential is required." });
+
+//     const ticket = await googleClient.verifyIdToken({
+//       idToken: credential,
+//       audience: process.env.GOOGLE_CLIENT_ID,
+//     });
+//     const { email } = ticket.getPayload();
+
+//     const user = await User.findOne({ email: email.toLowerCase() });
+//     if (!user) {
+//       return res.status(404).json({ error: "No account found. Please register with email first." });
+//     }
+
+//     if (!user.isEmailVerified) {
+//       user.isEmailVerified = true;
+//       await user.save({ validateBeforeSave: false });
+//     }
+
+//     const token = generateToken(user._id);
+//     res.status(200).json({
+//       message: "Login successful",
+//       token,
+//       user: {
+//         id: user._id,
+//         name: user.name,
+//         email: user.email,
+//         role: user.role,
+//         phone: user.phone,
+//         isEmailVerified: true,
+//         profileComplete: user.profileComplete || false,
+//       },
+//     });
+//   } catch (err) {
+//     console.error("googleLogin error:", err.message);
+//     res.status(401).json({ error: "Invalid Google credential." });
+//   }
+// };
+
+// // ─────────────────────────────────────────────────────────────
 // // UPLOAD DRIVER LICENSE
 // // ─────────────────────────────────────────────────────────────
 // exports.uploadDriverLicense = async (req, res) => {
@@ -566,7 +673,8 @@
 //       return res.status(400).json({ error: "Driver license document is required." });
 //     }
 
-//     const driverLicenseUrl = req.file.secure_url;
+//     // multer-storage-cloudinary stores the URL in .path, not .secure_url
+//     const driverLicenseUrl = req.file.path;
 
 //     const existingUser = await User.findById(req.user._id).select("-password -otp -otpExpiry");
 //     if (!existingUser) {
@@ -610,11 +718,10 @@
 //   }
 // };
 
-
-
 const User = require("../models/User");
 const jwt = require("jsonwebtoken");
 const crypto = require("crypto");
+const { OAuth2Client } = require("google-auth-library");
 const { sendOTPEmail } = require("../utils/sendEmail");
 const { validatePassword } = require("../utils/passwordValidator");
 const { buildProfileUpdate } = require("../utils/profileProgress");
@@ -623,6 +730,8 @@ const generateOTP = () => crypto.randomInt(100000, 999999).toString();
 
 const generateToken = (userId) =>
   jwt.sign({ id: userId }, process.env.JWT_SECRET, { expiresIn: "7d" });
+
+const googleClient = new OAuth2Client(process.env.GOOGLE_CLIENT_ID);
 
 // ─────────────────────────────────────────────────────────────
 // WORKER REGISTER
@@ -1026,7 +1135,7 @@ exports.getMe = async (req, res) => {
 exports.updateProfile = async (req, res) => {
   try {
     const {
-      name, phone, city, address, gender, age,
+      name, email, phone, city, address, gender, age,
       cnicNumber, trade, experience, hourlyRate, bio,
       availability, skills, companyName, businessType, howMany,
       documents, profileComplete, profileScore,
@@ -1035,8 +1144,15 @@ exports.updateProfile = async (req, res) => {
     const currentUser = await User.findById(req.user.id);
     if (!currentUser) return res.status(404).json({ error: "User not found." });
 
+    // Check email uniqueness if changing email
+    if (email && email.toLowerCase() !== currentUser.email) {
+      const emailTaken = await User.findOne({ email: email.toLowerCase(), _id: { $ne: req.user.id } });
+      if (emailTaken) return res.status(409).json({ error: "Email already in use." });
+    }
+
     const updatePayload = {
       ...(name         && { name }),
+      ...(email        && { email: email.toLowerCase() }),
       ...(phone        && { phone }),
       ...(city         && { city }),
       ...(address      && { address }),
@@ -1177,6 +1293,98 @@ exports.getProfile = async (req, res) => {
 };
 
 // ─────────────────────────────────────────────────────────────
+// CHANGE PASSWORD  (POST /api/auth/change-password)
+// ─────────────────────────────────────────────────────────────
+exports.changePassword = async (req, res) => {
+  try {
+    const { currentPassword, newPassword } = req.body;
+    if (!currentPassword || !newPassword) {
+      return res.status(400).json({ error: "Current and new password are required." });
+    }
+    if (newPassword.length < 6) {
+      return res.status(400).json({ error: "New password must be at least 6 characters." });
+    }
+    const user = await User.findById(req.user.id);
+    if (!user) return res.status(404).json({ error: "User not found." });
+    if (currentPassword !== user.password) {
+      return res.status(401).json({ error: "Current password is incorrect." });
+    }
+    user.password = newPassword;
+    await user.save({ validateBeforeSave: false });
+    res.status(200).json({ message: "Password changed successfully." });
+  } catch (err) {
+    console.error("changePassword error:", err.message);
+    res.status(500).json({ error: err.message });
+  }
+};
+
+// ─────────────────────────────────────────────────────────────
+// UPDATE PROFILE PHOTO  (POST /api/auth/update-profile-photo)
+// ─────────────────────────────────────────────────────────────
+exports.updateProfilePhoto = async (req, res) => {
+  try {
+    if (!req.file) {
+      return res.status(400).json({ error: "Profile photo is required." });
+    }
+    const photoUrl = req.file.path;
+    const user = await User.findByIdAndUpdate(
+      req.user.id,
+      { $set: { "documents.profilePhoto": photoUrl } },
+      { new: true, select: "-password -otp -otpExpiry" }
+    );
+    if (!user) return res.status(404).json({ error: "User not found." });
+    res.status(200).json({ message: "Profile photo updated.", user });
+  } catch (err) {
+    console.error("updateProfilePhoto error:", err.message);
+    res.status(500).json({ error: err.message });
+  }
+};
+
+// ─────────────────────────────────────────────────────────────
+// GOOGLE LOGIN  (POST /api/auth/google)
+// ─────────────────────────────────────────────────────────────
+exports.googleLogin = async (req, res) => {
+  try {
+    const { credential } = req.body;
+    if (!credential) return res.status(400).json({ error: "Google credential is required." });
+
+    const ticket = await googleClient.verifyIdToken({
+      idToken: credential,
+      audience: process.env.GOOGLE_CLIENT_ID,
+    });
+    const { email } = ticket.getPayload();
+
+    const user = await User.findOne({ email: email.toLowerCase() });
+    if (!user) {
+      return res.status(404).json({ error: "No account found. Please register with email first." });
+    }
+
+    if (!user.isEmailVerified) {
+      user.isEmailVerified = true;
+      await user.save({ validateBeforeSave: false });
+    }
+
+    const token = generateToken(user._id);
+    res.status(200).json({
+      message: "Login successful",
+      token,
+      user: {
+        id: user._id,
+        name: user.name,
+        email: user.email,
+        role: user.role,
+        phone: user.phone,
+        isEmailVerified: true,
+        profileComplete: user.profileComplete || false,
+      },
+    });
+  } catch (err) {
+    console.error("googleLogin error:", err.message);
+    res.status(401).json({ error: "Invalid Google credential." });
+  }
+};
+
+// ─────────────────────────────────────────────────────────────
 // UPLOAD DRIVER LICENSE
 // ─────────────────────────────────────────────────────────────
 exports.uploadDriverLicense = async (req, res) => {
@@ -1227,5 +1435,45 @@ exports.uploadDriverLicense = async (req, res) => {
   } catch (err) {
     console.error("uploadDriverLicense error:", err.message);
     res.status(400).json({ error: err.message });
+  }
+};
+
+// ─────────────────────────────────────────────────────────────
+// UPDATE WORKER SKILLS
+// PATCH /api/auth/update-skills
+// Body: { skills: [{ slug, name, proficiency, extraData }] }
+// ─────────────────────────────────────────────────────────────
+exports.updateSkills = async (req, res) => {
+  try {
+    const { skills } = req.body;
+
+    if (!Array.isArray(skills)) {
+      return res.status(400).json({ error: "skills must be an array." });
+    }
+
+    const sanitized = skills.map((s) => ({
+      slug:        String(s.slug || "").toLowerCase().trim(),
+      name:        String(s.name || "").trim(),
+      proficiency: ["beginner", "intermediate", "expert"].includes(s.proficiency)
+        ? s.proficiency
+        : "intermediate",
+      extraData:   s.extraData && typeof s.extraData === "object" ? s.extraData : {},
+    })).filter((s) => s.slug && s.name);
+
+    // Also set category to first skill's slug for backward-compat with job matching
+    const categoryUpdate = sanitized.length > 0 ? { category: sanitized[0].slug } : {};
+
+    const user = await User.findByIdAndUpdate(
+      req.user._id,
+      { $set: { skills: sanitized, ...categoryUpdate } },
+      { new: true, select: "-password -otp -otpExpiry" }
+    );
+
+    if (!user) return res.status(404).json({ error: "User not found." });
+
+    res.status(200).json({ message: "Skills updated successfully.", user });
+  } catch (err) {
+    console.error("updateSkills error:", err.message);
+    res.status(500).json({ error: err.message });
   }
 };
