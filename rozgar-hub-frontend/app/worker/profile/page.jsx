@@ -7,20 +7,24 @@ import {
   MapPin, DollarSign, Bell, PlusCircle,
   ThumbsUp, ThumbsDown, MessageSquare, Search, SlidersHorizontal,
   Upload, Car, User, Settings, Camera, Lock, Mail, Phone,
-  Eye, EyeOff, Save, Shield, Star, Edit2, RefreshCw
+  Eye, EyeOff, Save, Shield, Star, Edit2, RefreshCw,
+  BarChart2
 } from "lucide-react";
-import JobTracker from "@/components/JobTracker";
+import JobTracker              from "@/components/JobTracker";
+import AnalyticsTab            from "@/components/dashboard/AnalyticsTab";
+import SOSButton               from "@/components/SOSButton";
+import EmergencyContactsModal  from "@/components/EmergencyContactsModal";
 
 const JobMap = dynamic(() => import("@/components/JobMap"), { ssr: false });
 
-const socket = io("http://localhost:5000");
-if (typeof window !== "undefined") {
+const socket = typeof window !== "undefined" ? io(process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000") : null;
+if (socket && typeof window !== "undefined") {
   window._rozgarSocket = socket;
   socket.on("connect",    () => console.log("✅ Worker socket CONNECTED"));
   socket.on("disconnect", () => console.log("❌ Worker socket DISCONNECTED"));
 }
 
-const API = "http://localhost:5000";
+const API = process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000";
 
 const T = {
   en: {
@@ -132,6 +136,31 @@ const T = {
     ratedOn: "Rated",
     noRatingYet: "Not rated yet",
     rateNow: "Rate Now",
+    // SOS section
+    sosTitle: "Emergency SOS",
+    sosDesc: "Press the SOS button to instantly alert your emergency contacts with your live location. Especially for female workers, late-night jobs, and isolated locations.",
+    sosTag1: "Female domestic workers",
+    sosTag2: "Late-night jobs",
+    sosTag3: "Isolated locations",
+    sosAlertLabel: "Emergency Alert",
+    sosHoldHint: "Hold button — 5-second countdown gives you time to cancel if accidental.",
+    sosContactsTitle: "Emergency Contacts",
+    sosContactsSubtitle: "Notified instantly when you press SOS",
+    sosContactsDesc: "Add up to 5 trusted contacts. They receive an email with your live Google Maps location the moment SOS is triggered.",
+    sosManageContacts: "Manage Emergency Contacts",
+    sosSafetyTitle: "Safety Tips",
+    sosTip1Title: "Share Your Location",
+    sosTip1Desc: "Always let someone know where you're going before starting a job.",
+    sosTip2Title: "Keep Phone Charged",
+    sosTip2Desc: "Ensure battery is above 20% before heading to work.",
+    sosTip3Title: "Verify Employers",
+    sosTip3Desc: "Only accept jobs from verified employers shown with a ✓ badge.",
+    sosTip4Title: "Emergency Numbers",
+    sosTip4Desc: "Rescue: 1122 · Police: 15 · Edhi: 115 · Women Helpline: 1099",
+    sosTip5Title: "Check Job Details",
+    sosTip5Desc: "Review the exact address and contact before arriving.",
+    sosTip6Title: "Inform of Late Work",
+    sosTip6Desc: "If working late, trigger SOS and share live location proactively.",
     // Profile
     myProfile: "My Profile", editProfile: "Edit Profile", saveChanges: "Save Changes",
     fullName: "Full Name", emailAddress: "Email Address", phoneNumber: "Phone Number",
@@ -251,6 +280,32 @@ const T = {
     ratedOn: "ریٹ کیا",
     noRatingYet: "ابھی ریٹنگ نہیں دی",
     rateNow: "ابھی ریٹ کریں",
+    // SOS section
+    sosTitle: "ایمرجنسی ایس او ایس",
+    sosDesc: "ایس او ایس بٹن دبائیں اور اپنے ایمرجنسی رابطوں کو فوری لائیو لوکیشن بھیجیں۔ خاص طور پر خواتین ورکرز، رات کی نوکریوں، اور الگ تھلگ جگہوں کے لیے۔",
+    sosTag1: "گھریلو خواتین ورکرز",
+    sosTag2: "رات کی نوکریاں",
+    sosTag3: "الگ تھلگ مقامات",
+    sosAlertLabel: "ایمرجنسی الرٹ",
+    sosHoldHint: "بٹن دبائے رکھیں — 5 سیکنڈ کا وقت غلطی سے منسوخ کرنے کے لیے ملتا ہے۔",
+    sosContactsTitle: "ایمرجنسی رابطے",
+    sosContactsSubtitle: "ایس او ایس دبانے پر فوری اطلاع ملتی ہے",
+    sosContactsDesc: "5 قابل اعتماد رابطے شامل کریں۔ ایس او ایس دبتے ہی انہیں آپ کی لائیو گوگل میپس لوکیشن ای میل ہو جاتی ہے۔",
+    sosManageContacts: "ایمرجنسی رابطے منظم کریں",
+    sosSafetyTitle: "حفاظتی مشورے",
+    sosTip1Title: "اپنی لوکیشن شیئر کریں",
+    sosTip1Desc: "نوکری شروع کرنے سے پہلے کسی کو بتائیں کہ آپ کہاں جا رہے ہیں۔",
+    sosTip2Title: "فون چارج رکھیں",
+    sosTip2Desc: "کام پر جانے سے پہلے بیٹری 20% سے اوپر ہونی چاہیے۔",
+    sosTip3Title: "آجروں کی تصدیق کریں",
+    sosTip3Desc: "صرف ✓ نشان والے تصدیق شدہ آجروں کی نوکریاں قبول کریں۔",
+    sosTip4Title: "ایمرجنسی نمبر",
+    sosTip4Desc: "ریسکیو: 1122 · پولیس: 15 · ایدھی: 115 · خواتین ہیلپ لائن: 1099",
+    sosTip5Title: "نوکری کی تفصیل چیک کریں",
+    sosTip5Desc: "پہنچنے سے پہلے پتہ اور رابطہ نمبر ضرور دیکھیں۔",
+    sosTip6Title: "دیر سے کام کی اطلاع",
+    sosTip6Desc: "دیر تک کام ہو تو ایس او ایس دبائیں اور لائیو لوکیشن شیئر کریں۔",
+    // Profile
     myProfile: "میری پروفائل", editProfile: "ترمیم کریں", saveChanges: "تبدیلیاں محفوظ کریں",
     fullName: "پورا نام", emailAddress: "ای میل پتہ", phoneNumber: "فون نمبر",
     currentPassword: "موجودہ پاسورڈ", newPassword: "نیا پاسورڈ", confirmPassword: "پاسورڈ کی تصدیق",
@@ -309,6 +364,7 @@ function LogoutConfirmModal({ t, open, onClose, onConfirm }) {
 /* ═══════════════ WORKER PROFILE TAB ═══════════════ */
 function WorkerProfileTab({ t, lang, user, userProfile, appliedJobs, jobHistory, onPostAvail, onProfileUpdate }) {
   const [activeSection, setActiveSection] = useState("overview");
+  const [showEmergencyModal, setShowEmergencyModal] = useState(false);
   const [editForm, setEditForm] = useState({ name: "", email: "", phone: "" });
   const [pwForm, setPwForm] = useState({ current: "", newPw: "", confirm: "" });
   const [showPw, setShowPw] = useState({ current: false, newPw: false, confirm: false });
@@ -335,9 +391,33 @@ function WorkerProfileTab({ t, lang, user, userProfile, appliedJobs, jobHistory,
 
   const showToastMsg = (msg) => { setToast(msg); setTimeout(() => setToast(""), 2800); };
 
-  const handlePhotoChange = (e) => {
+  const handlePhotoChange = async (e) => {
     const file = e.target.files[0];
-    if (file) setPhotoPreview(URL.createObjectURL(file));
+    if (!file) return;
+    setPhotoPreview(URL.createObjectURL(file));
+    try {
+      const token = localStorage.getItem("token");
+      const formData = new FormData();
+      formData.append("profilePhoto", file);
+      const response = await fetch(`${API}/api/auth/update-profile-photo`, {
+        method: "POST",
+        headers: { Authorization: `Bearer ${token}` },
+        body: formData,
+      });
+      if (!response.ok) { showToastMsg("Failed to upload photo"); return; }
+      const data = await response.json();
+      const photoUrl = data.user?.documents?.profilePhoto;
+      if (photoUrl) {
+        const stored = JSON.parse(localStorage.getItem("user") || "{}");
+        const updated = { ...stored, documents: { ...(stored.documents || {}), profilePhoto: photoUrl } };
+        localStorage.setItem("user", JSON.stringify(updated));
+        onProfileUpdate(updated);
+        showToastMsg("Profile photo uploaded!");
+      }
+    } catch (err) {
+      console.error("Photo upload error:", err);
+      showToastMsg("Upload failed");
+    }
   };
 
   const handleSaveProfile = async () => {
@@ -394,13 +474,14 @@ function WorkerProfileTab({ t, lang, user, userProfile, appliedJobs, jobHistory,
   const total = progressSteps.reduce((a, x) => a + x.points, 0);
   const pct = Math.round((earned / total) * 100);
 
-  const avatar = photoPreview || profile?.avatar || profile?.profilePhoto || null;
+  const avatar = photoPreview || profile?.documents?.profilePhoto || profile?.avatar || profile?.profilePhoto || null;
   const initials = (user?.name || "W").split(" ").map(w => w[0]).join("").toUpperCase().slice(0, 2);
 
   const SECTIONS = [
-    { id: "overview", icon: User, label: lang === "ur" ? "جائزہ" : "Overview" },
-    { id: "edit", icon: Edit2, label: lang === "ur" ? "پروفائل ترمیم" : "Edit Profile" },
-    { id: "security", icon: Lock, label: lang === "ur" ? "سیکیورٹی" : "Security" },
+    { id: "overview",  icon: User,   label: lang === "ur" ? "جائزہ"        : "Overview" },
+    { id: "edit",      icon: Edit2,  label: lang === "ur" ? "پروفائل ترمیم" : "Edit Profile" },
+    { id: "security",  icon: Lock,   label: lang === "ur" ? "سیکیورٹی"     : "Security" },
+    { id: "sos",       icon: Shield, label: lang === "ur" ? "ایس او ایس"   : "SOS Safety" },
   ];
 
   return (
@@ -416,7 +497,6 @@ function WorkerProfileTab({ t, lang, user, userProfile, appliedJobs, jobHistory,
         <div style={{ position: "absolute", top: -40, right: -40, width: 180, height: 180, borderRadius: "50%", background: "rgba(52,211,153,0.08)" }} />
         <div style={{ position: "absolute", bottom: -20, left: -20, width: 120, height: 120, borderRadius: "50%", background: "rgba(5,150,105,0.12)" }} />
         <div style={{ display: "flex", alignItems: "center", gap: 20, position: "relative" }}>
-          {/* Avatar */}
           <div style={{ position: "relative", flexShrink: 0 }}>
             <div style={{ width: 88, height: 88, borderRadius: "50%", border: pct === 100 ? "3px solid #22c55e" : "3px solid rgba(255,255,255,.2)", overflow: "hidden", background: "linear-gradient(135deg,#34d399,#059669)", display: "flex", alignItems: "center", justifyContent: "center" }}>
               {avatar
@@ -441,7 +521,6 @@ function WorkerProfileTab({ t, lang, user, userProfile, appliedJobs, jobHistory,
             </div>
           </div>
         </div>
-        {/* Stats */}
         <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 12, marginTop: 24 }}>
           {[
             { icon: "📝", value: appliedCount, label: t.jobsApplied },
@@ -471,7 +550,6 @@ function WorkerProfileTab({ t, lang, user, userProfile, appliedJobs, jobHistory,
       {/* OVERVIEW */}
       {activeSection === "overview" && (
         <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
-          {/* Profile Progress */}
           <div style={{ background: "#fff", borderRadius: 18, padding: 24, boxShadow: "0 2px 14px rgba(0,0,0,.06)", border: "1.5px solid #e2e8f0" }}>
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 16 }}>
               <div>
@@ -576,7 +654,6 @@ function WorkerProfileTab({ t, lang, user, userProfile, appliedJobs, jobHistory,
       {activeSection === "edit" && (
         <div style={{ background: "#fff", borderRadius: 18, padding: 28, boxShadow: "0 2px 14px rgba(0,0,0,.06)", border: "1.5px solid #e2e8f0" }}>
           <h3 style={{ fontSize: 16, fontWeight: 800, color: "#0f172a", margin: "0 0 24px" }}>{t.editProfile}</h3>
-          {/* Avatar upload */}
           <div style={{ display: "flex", alignItems: "center", gap: 16, padding: "18px 20px", background: "#f8fafc", borderRadius: 14, border: "1.5px solid #e2e8f0", marginBottom: 24 }}>
             <div style={{ position: "relative", flexShrink: 0 }}>
               <div style={{ width: 68, height: 68, borderRadius: "50%", overflow: "hidden", background: "linear-gradient(135deg,#34d399,#059669)", display: "flex", alignItems: "center", justifyContent: "center", border: pct === 100 ? "3px solid #22c55e" : "2.5px solid #e2e8f0" }}>
@@ -723,6 +800,87 @@ function WorkerProfileTab({ t, lang, user, userProfile, appliedJobs, jobHistory,
           </div>
         );
       })()}
+
+      {/* ── SOS SAFETY TAB — FULLY BILINGUAL ── */}
+      {activeSection === "sos" && (
+        <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
+
+          {/* SOS Alert Banner */}
+          <div style={{ background: "linear-gradient(135deg,#7f1d1d,#dc2626)", borderRadius: 18, padding: "24px 28px", color: "#fff", position: "relative", overflow: "hidden" }}>
+            <div style={{ position: "absolute", top: -30, right: -30, width: 140, height: 140, borderRadius: "50%", background: "rgba(255,255,255,.06)" }} />
+            <div style={{ position: "absolute", bottom: -20, left: -20, width: 100, height: 100, borderRadius: "50%", background: "rgba(0,0,0,.1)" }} />
+            <div style={{ position: "relative" }}>
+              <div style={{ fontSize: 36, marginBottom: 10 }}>🆘</div>
+              <h3 style={{ fontSize: 18, fontWeight: 900, margin: "0 0 6px" }}>{t.sosTitle}</h3>
+              <p style={{ fontSize: 13, color: "rgba(255,255,255,.75)", margin: "0 0 16px", lineHeight: 1.6 }}>
+                {t.sosDesc}
+              </p>
+              <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+                {[t.sosTag1, t.sosTag2, t.sosTag3].map(tag => (
+                  <span key={tag} style={{ background: "rgba(255,255,255,.15)", fontSize: 11, fontWeight: 700, padding: "4px 12px", borderRadius: 20 }}>{tag}</span>
+                ))}
+              </div>
+            </div>
+          </div>
+
+          {/* SOS Button + Emergency Contacts side by side */}
+          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16 }}>
+
+            {/* SOS Button Card */}
+            <div style={{ background: "#fff", borderRadius: 18, padding: 24, border: "1.5px solid #fca5a5", boxShadow: "0 2px 14px rgba(220,38,38,.08)", display: "flex", flexDirection: "column", alignItems: "center", gap: 12 }}>
+              <div style={{ fontSize: 13, fontWeight: 700, color: "#dc2626", textTransform: "uppercase", letterSpacing: ".06em" }}>{t.sosAlertLabel}</div>
+              <SOSButton socket={typeof window !== "undefined" ? window._rozgarSocket : null} />
+              <p style={{ fontSize: 11, color: "#9ca3af", textAlign: "center", lineHeight: 1.5, margin: 0 }}>
+                {t.sosHoldHint}
+              </p>
+            </div>
+
+            {/* Emergency Contacts Card */}
+            <div style={{ background: "#fff", borderRadius: 18, padding: 24, border: "1.5px solid #e5e7eb", boxShadow: "0 2px 14px rgba(0,0,0,.05)", display: "flex", flexDirection: "column", gap: 14 }}>
+              <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+                <div style={{ width: 38, height: 38, borderRadius: 10, background: "#fef2f2", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+                  <Phone size={17} color="#dc2626" />
+                </div>
+                <div>
+                  <div style={{ fontSize: 14, fontWeight: 800, color: "#0f172a" }}>{t.sosContactsTitle}</div>
+                  <div style={{ fontSize: 11, color: "#64748b" }}>{t.sosContactsSubtitle}</div>
+                </div>
+              </div>
+              <p style={{ fontSize: 12, color: "#475569", lineHeight: 1.6, margin: 0 }}>
+                {t.sosContactsDesc}
+              </p>
+              <button
+                onClick={() => setShowEmergencyModal(true)}
+                style={{ padding: "12px", borderRadius: 12, border: "none", background: "linear-gradient(135deg,#dc2626,#991b1b)", color: "#fff", fontWeight: 700, fontSize: 13, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", gap: 8 }}>
+                <Phone size={14} /> {t.sosManageContacts}
+              </button>
+            </div>
+          </div>
+
+          {/* Safety Tips */}
+          <div style={{ background: "#fff", borderRadius: 18, padding: 24, border: "1.5px solid #e5e7eb", boxShadow: "0 2px 14px rgba(0,0,0,.05)" }}>
+            <div style={{ fontSize: 14, fontWeight: 800, color: "#0f172a", marginBottom: 16 }}>{t.sosSafetyTitle}</div>
+            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
+              {[
+                { icon: "📍", title: t.sosTip1Title, desc: t.sosTip1Desc },
+                { icon: "📱", title: t.sosTip2Title, desc: t.sosTip2Desc },
+                { icon: "🔒", title: t.sosTip3Title, desc: t.sosTip3Desc },
+                { icon: "🚨", title: t.sosTip4Title, desc: t.sosTip4Desc },
+                { icon: "📋", title: t.sosTip5Title, desc: t.sosTip5Desc },
+                { icon: "⏰", title: t.sosTip6Title, desc: t.sosTip6Desc },
+              ].map(tip => (
+                <div key={tip.title} style={{ background: "#f8fafc", borderRadius: 12, padding: "14px 16px", border: "1px solid #e2e8f0" }}>
+                  <div style={{ fontSize: 20, marginBottom: 6 }}>{tip.icon}</div>
+                  <div style={{ fontSize: 12, fontWeight: 700, color: "#0f172a", marginBottom: 4 }}>{tip.title}</div>
+                  <div style={{ fontSize: 11, color: "#64748b", lineHeight: 1.5 }}>{tip.desc}</div>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {showEmergencyModal && <EmergencyContactsModal onClose={() => setShowEmergencyModal(false)} />}
     </div>
   );
 }
@@ -894,6 +1052,14 @@ export default function WorkerDashboard() {
   const swal = (opts) => typeof window !== "undefined" && window.Swal && window.Swal.fire(opts);
 
   useEffect(() => {
+    if (typeof window === "undefined") return;
+    const params = new URLSearchParams(window.location.search);
+    const tabParam = params.get("tab");
+    const validTabs = ["requests", "applied", "history", "browse", "profile", "analytics"];
+    if (tabParam && validTabs.includes(tabParam)) setActiveTab(tabParam);
+  }, []);
+
+  useEffect(() => {
     const handler = (e) => { e.preventDefault(); e.returnValue = "Your active session will be lost if you reload."; return e.returnValue; };
     window.addEventListener("beforeunload", handler);
     return () => window.removeEventListener("beforeunload", handler);
@@ -925,11 +1091,8 @@ export default function WorkerDashboard() {
     if (!stored) return;
     const u = JSON.parse(stored);
     setUser(u);
-    if (u?.id && typeof window !== "undefined") {
-      window.history.replaceState(null, "", `/worker/profile/${u.id}`);
-    }
-    socket.emit("join", u.id);
-    socket.emit("worker_online", { workerId: u.id, name: u.name });
+    socket?.emit("join", u.id);
+    socket?.emit("worker_online", { workerId: u.id, name: u.name });
     const token = localStorage.getItem("token");
     if (token) refetchProfile(token); else setUserProfile(u);
     fetch(`${API}/api/applications/${u.id}`).then(r => r.json()).then(setAppliedJobs).catch(() => {});
@@ -956,6 +1119,7 @@ export default function WorkerDashboard() {
   }, []);
 
   useEffect(() => {
+    if (!socket) return;
     socket.on("new_job_request", (data) => {
       if (showTracker) return;
       const reqId = data.requestId || data._id || `req_${Date.now()}`;
@@ -987,6 +1151,7 @@ export default function WorkerDashboard() {
         const finalPrice = req.cardCounter || req.offeredPrice;
         setPendingRequests(prev => prev.map(r => r.requestId === req.requestId ? { ...r, cardState: "confirmed" } : r));
         setConfirmedJob({ request: req, price: finalPrice });
+        setShowTracker(true);
         setAppliedJobs(prev => {
           const exists = prev.some(a => a._id === req.requestId);
           if (exists) return prev.map(a => a._id === req.requestId ? { ...a, status: "confirmed", agreedPrice: finalPrice } : a);
@@ -1004,8 +1169,8 @@ export default function WorkerDashboard() {
       if (req) setPendingRequests(prev => prev.map(r => r.requestId === req.requestId ? { ...r, cardState: "rejected" } : r));
     });
     socket.on("employer_counter", (data) => {
-      const req = activeRequestRef.current;
-      if (req) setPendingRequests(prev => prev.map(r => r.requestId === req.requestId ? { ...r, cardState: "counter_received", cardEmployerCounter: data } : r));
+      const targetId = data.requestId || activeRequestRef.current?.requestId;
+      if (targetId) setPendingRequests(prev => prev.map(r => r.requestId === targetId ? { ...r, cardState: "counter_received", cardEmployerCounter: data } : r));
       addNotif(`💬 Employer sent a counter offer: Rs. ${data.price}`);
     });
     socket.on("employer_dismiss_worker", () => {
@@ -1013,7 +1178,15 @@ export default function WorkerDashboard() {
       if (req) setPendingRequests(prev => prev.map(r => r.requestId === req.requestId ? { ...r, cardState: "dismissed" } : r));
       addNotif("Request was dismissed by employer");
     });
-    return () => { socket.off("new_job_request"); socket.off("employer_confirm_worker"); socket.off("employer_accepted"); socket.off("request_taken_not_selected"); socket.off("employer_rejected"); socket.off("employer_counter"); socket.off("employer_dismiss_worker"); };
+    socket.on("browse_application_accepted", (data) => {
+      const finalPrice = data.agreedPrice || data.offeredRate;
+      setAppliedJobs(prev => prev.map(a => a._id === data.applicationId ? { ...a, status: "confirmed", agreedPrice: finalPrice } : a));
+      const reqForTracker = { requestId: data.applicationId, title: data.title || "", category: data.category || "", workLocation: data.workLocation || "", employerName: data.employerName || "", employerId: data.employerId || "", offeredPrice: finalPrice };
+      setConfirmedJob({ request: reqForTracker, price: finalPrice });
+      setShowTracker(true);
+      addNotif(`✅ Your browse application was accepted! Rs. ${finalPrice}`);
+    });
+    return () => { socket.off("new_job_request"); socket.off("employer_confirm_worker"); socket.off("employer_accepted"); socket.off("request_taken_not_selected"); socket.off("employer_rejected"); socket.off("employer_counter"); socket.off("employer_dismiss_worker"); socket.off("browse_application_accepted"); };
   }, [showTracker]);
 
   useEffect(() => {
@@ -1063,6 +1236,11 @@ export default function WorkerDashboard() {
   const handleCardDismiss = (requestId) => {
     setPendingRequests(prev => prev.filter(r => r.requestId !== requestId));
   };
+  const handleCancelRequest = (requestId) => {
+    const req = pendingRequests.find(r => r.requestId === requestId);
+    if (req) socket?.emit("worker_cancel_request", { requestId, workerId: user.id, employerId: req.employerId });
+    setPendingRequests(prev => prev.filter(r => r.requestId !== requestId));
+  };
 
   const getStoredReview = (jobId) => { try { return JSON.parse(localStorage.getItem(`job_review_${jobId}`) || "{}"); } catch { return {}; } };
   const saveWorkerReview = (jobId, rating, comment) => {
@@ -1078,6 +1256,7 @@ export default function WorkerDashboard() {
       const entry = { _id: jobId, title: confirmedJob.request?.title || confirmedJob.request?.category || "Job", workLocation: confirmedJob.request?.workLocation || "", employerName: confirmedJob.request?.employerName || "", agreedPrice: confirmedJob.price || "", completedAt: new Date().toISOString(), myRating: 0, myComment: "" };
       setJobHistory(prev => [entry, ...prev]);
       setAppliedJobs(prev => prev.map(a => a._id === confirmedJob.request?.requestId ? { ...a, status: "completed" } : a));
+      setPendingRequests(prev => prev.filter(r => r.requestId !== confirmedJob.request?.requestId));
       setRatingJobInfo({ jobId, jobTitle: entry.title, employerName: entry.employerName, price: confirmedJob.price });
       setShowRatingModal(true);
     } else finishClose();
@@ -1130,16 +1309,50 @@ export default function WorkerDashboard() {
     } catch (_) { setShowAvailModal(false); setUserProfile(prev => prev ? { ...prev, availabilityPosted: true } : prev); swal({ title: t.swalSavedLocally, text: t.swalSavedLocallyText, icon: "info" }); }
   };
 
-  const handleApplyJob = async (jobId, rate) => {
-    const res = await fetch(`${API}/api/applications`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ job: jobId, worker: user.id, offeredRate: rate }) });
-    const data = await res.json();
-    if (!res.ok) { swal({ title: t.swalOops, text: data.error || t.swalAlreadyApplied, icon: "error" }); return; }
+  const handleApplyJob = (jobId, rate) => {
+    if (!selectedJob || !rate) return;
+    const requestId = selectedJob._id;
+    const employerId = selectedJob.employer?._id || selectedJob.employer;
+    const browseRequest = {
+      requestId,
+      employerId: String(employerId || ""),
+      employerName: selectedJob.employer?.name || "",
+      title: selectedJob.title || selectedJob.category || "Job",
+      category: selectedJob.category || "",
+      workLocation: selectedJob.workLocation || selectedJob.location || "",
+      offeredPrice: Number(rate),
+      cardState: "accepted_waiting",
+      cardCounter: String(rate),
+      cardEmployerCounter: null,
+      lat: selectedJob.lat || selectedJob.latitude || null,
+      lng: selectedJob.lng || selectedJob.longitude || null,
+      fromBrowse: true,
+    };
+    setPendingRequests(prev => {
+      if (prev.some(r => r.requestId === requestId)) {
+        return prev.map(r => r.requestId === requestId ? { ...r, ...browseRequest, cardState: "accepted_waiting" } : r);
+      }
+      return [browseRequest, ...prev];
+    });
+    const merged = { ...browseRequest };
+    activeRequestRef.current = merged;
     setShowApplyModal(false);
-    swal({ title: t.swalAppSent, html: `<strong>Rs. ${rate}</strong> — ${t.swalAppSentText}`, icon: "success" });
+    setActiveTab("requests");
+    socket.emit("worker_job_accept", {
+      requestId,
+      employerId: String(employerId || ""),
+      workerId: user.id,
+      workerName: user.name,
+      workerRating: "4.8",
+      workerPhone: user.phone || "",
+      workerExperience: userProfile?.experience || "",
+      workerPhoto: userProfile?.documents?.profilePhoto || null,
+      price: Number(rate),
+    });
+    addNotif(`✅ Applied to "${selectedJob.title}" — Rs. ${rate}`);
   };
 
   const handleLogout = () => { localStorage.removeItem("user"); localStorage.removeItem("token"); window.location.href = "/"; };
-
   const handleProfileUpdate = (updatedUser) => { setUser(updatedUser); };
 
   if (!user) return (
@@ -1158,11 +1371,12 @@ export default function WorkerDashboard() {
 
   const pendingRequestCount = pendingRequests.filter(r => !["confirmed", "rejected", "dismissed"].includes(r.cardState)).length;
   const NAV = [
-    { id: "requests", icon: Bell, label: t.navRequests, badge: pendingRequestCount },
-    { id: "applied", icon: CheckCircle, label: t.navApplied },
-    { id: "history", icon: Briefcase, label: t.navHistory },
-    { id: "browse", icon: Search, label: t.navBrowse },
-    { id: "profile", icon: User, label: t.navProfile },
+    { id: "requests",  icon: Bell,     label: t.navRequests, badge: pendingRequestCount },
+    { id: "applied",   icon: CheckCircle, label: t.navApplied },
+    { id: "history",   icon: Briefcase,   label: t.navHistory },
+    { id: "browse",    icon: Search,      label: t.navBrowse },
+    { id: "profile",   icon: User,        label: t.navProfile },
+    { id: "analytics", icon: BarChart2,   label: lang === "ur" ? "تجزیات" : "Analytics" },
   ];
 
   return (
@@ -1182,7 +1396,6 @@ export default function WorkerDashboard() {
 
       <RatingModal t={t} lang={lang} open={showRatingModal} jobTitle={ratingJobInfo?.jobTitle || ""} targetName={ratingJobInfo?.employerName || (lang === "ur" ? "آجر" : "Employer")} price={ratingJobInfo?.price} onSubmit={handleRatingSubmit} onSkip={handleRatingSkip} />
       <LogoutConfirmModal t={t} open={showLogoutConfirm} onClose={() => setShowLogoutConfirm(false)} onConfirm={handleLogout} />
-
 
       {showApplyModal && selectedJob && (
         <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.55)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 200, padding: 24, backdropFilter: "blur(4px)" }}>
@@ -1231,11 +1444,29 @@ export default function WorkerDashboard() {
         boxShadow: "2px 0 18px rgba(0,0,0,.18)",
       }}>
         {/* Brand */}
-        <div style={{ padding: "20px 16px 14px", display: "flex", alignItems: "center", justifyContent: sidebarOpen ? "space-between" : "center", borderBottom: "1px solid rgba(255,255,255,0.08)", flexShrink: 0 }}>
+        <div style={{ padding: "20px 16px 14px", display: "flex", alignItems: "center", justifyContent: sidebarOpen ? "space-between" : "center", gap: 14, borderBottom: "1px solid rgba(255,255,255,0.08)", flexShrink: 0 }}>
           {sidebarOpen && (
-            <div style={{ animation: "fadeIn .25s" }}>
-              <div style={{ fontSize: 18, fontWeight: 900, background: "linear-gradient(90deg,#34d399,#6ee7b7)", WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent" }}>{t.brand}</div>
-              <div style={{ fontSize: 9, opacity: 0.4, marginTop: 2, color: "#94a3b8", letterSpacing: ".12em" }}>{t.role}</div>
+            <div style={{ display: "flex", alignItems: "center", gap: 12, animation: "fadeIn .25s", flex: 1, minWidth: 0 }}>
+              <div style={{ width: 44, height: 44, borderRadius: "50%", overflow: "hidden", background: "linear-gradient(135deg,#34d399,#059669)", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0, border: "2px solid rgba(110,231,183,0.3)" }}>
+                {avatar ? (
+                  <img src={avatar} alt="profile" style={{ width: "100%", height: "100%", objectFit: "cover" }} />
+                ) : (
+                  <span style={{ fontSize: 18, fontWeight: 900, color: "#fff" }}>{initials}</span>
+                )}
+              </div>
+              <div style={{ minWidth: 0 }}>
+                <div style={{ fontSize: 18, fontWeight: 900, background: "linear-gradient(90deg,#34d399,#6ee7b7)", WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{t.brand}</div>
+                <div style={{ fontSize: 9, opacity: 0.4, marginTop: 2, color: "#94a3b8", letterSpacing: ".12em" }}>{t.role}</div>
+              </div>
+            </div>
+          )}
+          {!sidebarOpen && (
+            <div style={{ width: 44, height: 44, borderRadius: "50%", overflow: "hidden", background: "linear-gradient(135deg,#34d399,#059669)", display: "flex", alignItems: "center", justifyContent: "center", border: "2px solid rgba(110,231,183,0.3)" }}>
+              {avatar ? (
+                <img src={avatar} alt="profile" style={{ width: "100%", height: "100%", objectFit: "cover" }} />
+              ) : (
+                <span style={{ fontSize: 18, fontWeight: 900, color: "#fff" }}>{initials}</span>
+              )}
             </div>
           )}
           <button onClick={() => setSidebarOpen(!sidebarOpen)} style={{ background: "rgba(255,255,255,0.08)", border: "none", color: "#fff", padding: 7, borderRadius: 8, cursor: "pointer", display: "flex", flexShrink: 0 }}>
@@ -1274,7 +1505,6 @@ export default function WorkerDashboard() {
 
         {/* User + Logout */}
         <div style={{ padding: "8px 8px 12px", borderTop: "1px solid rgba(255,255,255,0.08)", flexShrink: 0 }}>
-          {/* Profile Button */}
           <button
             onClick={() => { setActiveTab("profile"); setShowTracker(false); }}
             style={{ display: "flex", alignItems: "center", gap: 10, padding: sidebarOpen ? "10px 12px" : "10px", borderRadius: 10, border: "none", cursor: "pointer", width: "100%", background: activeTab === "profile" ? "rgba(52,211,153,.15)" : "rgba(255,255,255,.04)", marginBottom: 4, justifyContent: sidebarOpen ? (t.dir === "rtl" ? "flex-end" : "flex-start") : "center", flexDirection: t.dir === "rtl" ? "row-reverse" : "row", transition: "background .15s" }}>
@@ -1288,8 +1518,6 @@ export default function WorkerDashboard() {
               </div>
             )}
           </button>
-
-          {/* Logout */}
           <button onClick={() => setShowLogoutConfirm(true)}
             style={{ display: "flex", alignItems: "center", gap: 12, padding: "9px", borderRadius: 10, border: "none", cursor: "pointer", width: "100%", background: "rgba(239,68,68,.1)", color: "#f87171", fontSize: 12.5, fontFamily: lang === "ur" ? "'Noto Nastaliq Urdu',serif" : "'Outfit',sans-serif", justifyContent: sidebarOpen ? (t.dir === "rtl" ? "flex-end" : "flex-start") : "center", flexDirection: t.dir === "rtl" ? "row-reverse" : "row", transition: "background .15s" }}>
             <LogOut size={15} />
@@ -1298,7 +1526,7 @@ export default function WorkerDashboard() {
         </div>
       </aside>
 
-      {/* ── MAIN (offset for fixed sidebar) ── */}
+      {/* ── MAIN ── */}
       <div style={{
         flex: 1,
         display: "flex",
@@ -1338,11 +1566,12 @@ export default function WorkerDashboard() {
               employer={{ employerId: confirmedJob.request?.employerId, employerName: confirmedJob.request?.employerName }}
               agreedPrice={confirmedJob.price} socket={socket} onJobComplete={handleTrackerComplete} lang={lang} t={t} />
           )}
-          {!showTracker && activeTab === "requests" && <RequestsTab t={t} lang={lang} notifications={notifications} pendingRequests={pendingRequests} userProfile={mergedProfile} onPostAvail={() => setShowAvailModal(true)} onCardAccept={handleCardAccept} onCardDecline={handleCardDecline} onCardShowCounter={handleCardShowCounter} onCardCounterChange={handleCardCounterChange} onCardSendCounter={handleCardSendCounter} onCardAcceptCounter={handleCardAcceptCounter} onCardRejectCounter={handleCardRejectCounter} onCardDismiss={handleCardDismiss} onOpenTracker={() => setShowTracker(true)} />}
-          {!showTracker && activeTab === "applied" && <AppliedTab t={t} applied={appliedJobs} lang={lang} userProfile={mergedProfile} onPostAvail={() => setShowAvailModal(true)} />}
-          {!showTracker && activeTab === "history" && <HistoryTab t={t} history={jobHistory} lang={lang} userProfile={mergedProfile} onPostAvail={() => setShowAvailModal(true)} onReRate={handleReRate} />}
-          {!showTracker && activeTab === "browse" && <BrowseTab t={t} lang={lang} userId={user.id} userProfile={mergedProfile} onPostAvail={() => setShowAvailModal(true)} onOpenApplyModal={(job) => { setSelectedJob(job); setOfferedRate(String(job.salary || "")); setShowApplyModal(true); }} />}
-          {!showTracker && activeTab === "profile" && <WorkerProfileTab t={t} lang={lang} user={user} userProfile={userProfile} appliedJobs={appliedJobs} jobHistory={jobHistory} onPostAvail={() => setShowAvailModal(true)} onProfileUpdate={handleProfileUpdate} />}
+          {!showTracker && activeTab === "requests"  && <RequestsTab t={t} lang={lang} notifications={notifications} pendingRequests={pendingRequests} userProfile={mergedProfile} onPostAvail={() => setShowAvailModal(true)} onCardAccept={handleCardAccept} onCardDecline={handleCardDecline} onCardShowCounter={handleCardShowCounter} onCardCounterChange={handleCardCounterChange} onCardSendCounter={handleCardSendCounter} onCardAcceptCounter={handleCardAcceptCounter} onCardRejectCounter={handleCardRejectCounter} onCardDismiss={handleCardDismiss} onCancelRequest={handleCancelRequest} onOpenTracker={() => setShowTracker(true)} />}
+          {!showTracker && activeTab === "applied"   && <AppliedTab t={t} applied={appliedJobs} lang={lang} userProfile={mergedProfile} onPostAvail={() => setShowAvailModal(true)} />}
+          {!showTracker && activeTab === "history"   && <HistoryTab t={t} history={jobHistory} lang={lang} userProfile={mergedProfile} onPostAvail={() => setShowAvailModal(true)} onReRate={handleReRate} />}
+          {!showTracker && activeTab === "browse"    && <BrowseTab t={t} lang={lang} userId={user.id} userProfile={mergedProfile} onPostAvail={() => setShowAvailModal(true)} socket={socket} onOpenApplyModal={(job) => { setSelectedJob(job); const num = Number(String(job.salary || job.offeredPrice || "").replace(/[^0-9]/g, "")) || Number(job.offeredPrice) || ""; setOfferedRate(String(num || "")); setShowApplyModal(true); }} />}
+          {!showTracker && activeTab === "profile"   && <WorkerProfileTab t={t} lang={lang} user={user} userProfile={userProfile} appliedJobs={appliedJobs} jobHistory={jobHistory} onPostAvail={() => setShowAvailModal(true)} onProfileUpdate={handleProfileUpdate} />}
+          {!showTracker && activeTab === "analytics" && <AnalyticsTab user={user} />}
         </main>
       </div>
 
@@ -1428,13 +1657,13 @@ function ProfileProgress({ t, userProfile, onPostAvail }) {
   const hasFirstJob = !!(profile.firstJobAccepted || profile.firstJobCompleted || profile.jobsCompleted > 0);
   const isAdminVerified = !!(profile.isVerified || profile.adminVerified);
   const steps = [
-    { key: "registered", label: t.stepRegistered, done: true, points: 10, tip: null },
-    { key: "profilePhoto", label: t.stepProfilePhoto, done: hasProfilePhoto, points: 20, tip: t.tipProfilePhoto },
-    { key: "cnicDocs", label: t.stepCnicDocs, done: hasCnic, points: 20, tip: t.tipCnic },
-    { key: "availability", label: t.stepAvailability, done: isAvailPosted, points: 15, action: onPostAvail, tip: t.tipAvailability },
+    { key: "registered",   label: t.stepRegistered,   done: true,            points: 10, tip: null },
+    { key: "profilePhoto", label: t.stepProfilePhoto, done: hasProfilePhoto,  points: 20, tip: t.tipProfilePhoto },
+    { key: "cnicDocs",     label: t.stepCnicDocs,     done: hasCnic,          points: 20, tip: t.tipCnic },
+    { key: "availability", label: t.stepAvailability, done: isAvailPosted,    points: 15, action: onPostAvail, tip: t.tipAvailability },
     ...(isDriver ? [{ key: "license", label: t.stepLicense, done: hasLicense, points: 15, tip: t.tipLicense }] : []),
     { key: "firstJob", label: t.dir === "rtl" ? "پہلی نوکری مکمل" : "First Job Completed", done: hasFirstJob, points: 15, tip: t.dir === "rtl" ? "جب آپ پہلی نوکری مکمل کریں پوائنٹس خود ملیں گے" : "Accept and complete your first job" },
-    { key: "verified", label: t.stepVerified, done: isAdminVerified, points: 20, tip: t.tipVerified },
+    { key: "verified",     label: t.stepVerified,     done: isAdminVerified,  points: 20, tip: t.tipVerified },
   ];
   const totalPoints = steps.reduce((s, x) => s + x.points, 0);
   const earnedPoints = steps.filter(s => s.done).reduce((s, x) => s + x.points, 0);
@@ -1512,7 +1741,7 @@ function ProfileProgress({ t, userProfile, onPostAvail }) {
 }
 
 /* ═══════════════ REQUESTS TAB ═══════════════ */
-function RequestsTab({ t, lang, notifications, pendingRequests, userProfile, onPostAvail, onCardAccept, onCardDecline, onCardShowCounter, onCardCounterChange, onCardSendCounter, onCardAcceptCounter, onCardRejectCounter, onCardDismiss, onOpenTracker }) {
+function RequestsTab({ t, lang, notifications, pendingRequests, userProfile, onPostAvail, onCardAccept, onCardDecline, onCardShowCounter, onCardCounterChange, onCardSendCounter, onCardAcceptCounter, onCardRejectCounter, onCardDismiss, onCancelRequest, onOpenTracker }) {
   const activeCount = (pendingRequests || []).filter(r => !["confirmed", "rejected", "dismissed"].includes(r.cardState)).length;
   return (
     <div style={{ maxWidth: 700, margin: "0 auto" }}>
@@ -1523,7 +1752,6 @@ function RequestsTab({ t, lang, notifications, pendingRequests, userProfile, onP
         </div>
         <p style={{ fontSize: 13, color: "#64748b", margin: "4px 0 0" }}>{lang === "ur" ? "آجروں کی طرف سے آنے والی نوکری کی درخواستیں" : "Incoming job requests from employers appear here as cards"}</p>
       </div>
-
       {(!pendingRequests || pendingRequests.length === 0) ? (
         <div style={{ background: "#fff", borderRadius: 20, padding: "48px 40px", textAlign: "center", boxShadow: "0 4px 20px rgba(0,0,0,0.06)", border: "1.5px solid #e2e8f0" }}>
           <div style={{ width: 80, height: 80, borderRadius: "50%", background: "linear-gradient(135deg,#e2e8f0,#cbd5e1)", display: "flex", alignItems: "center", justifyContent: "center", margin: "0 auto 20px", fontSize: 34 }}>📭</div>
@@ -1550,6 +1778,7 @@ function RequestsTab({ t, lang, notifications, pendingRequests, userProfile, onP
               onAcceptCounter={() => onCardAcceptCounter(req)}
               onRejectCounter={() => onCardRejectCounter(req)}
               onDismiss={() => onCardDismiss(req.requestId)}
+              onCancelRequest={() => onCancelRequest(req.requestId)}
               onOpenTracker={onOpenTracker}
             />
           ))}
@@ -1624,7 +1853,6 @@ function AppliedTab({ t, applied, lang, userProfile, onPostAvail }) {
                         <p style={{ fontSize: 11, fontWeight: 800, color: "#1d4ed8", textTransform: "uppercase", letterSpacing: ".05em", margin: "0 0 3px" }}>{app.status === "completed" ? (lang === "ur" ? "✓ نوکری مکمل" : "✓ Job Completed") : (lang === "ur" ? "✅ آپ تصدیق شدہ ہیں" : "✅ You're confirmed for this job")}</p>
                         {(app.employerName || job.employer?.name) && <p style={{ fontSize: 12.5, color: "#475569", margin: 0 }}>👤 {app.employerName || job.employer?.name}</p>}
                       </div>
-                      {/* Phone only visible during active job — hidden after completion */}
                       {app.employerPhone && ["confirmed", "accepted", "in_progress"].includes(app.status) && (
                         <a href={`tel:${app.employerPhone}`} style={{ display: "flex", alignItems: "center", gap: 6, padding: "8px 16px", borderRadius: 10, background: "linear-gradient(135deg,#3b82f6,#2563eb)", color: "#fff", textDecoration: "none", fontSize: 13, fontWeight: 700, boxShadow: "0 2px 8px rgba(59,130,246,.3)" }}>📞 {t.callEmployer}</a>
                       )}
@@ -1722,7 +1950,7 @@ function HistoryTab({ t, history, lang, userProfile, onPostAvail, onReRate }) {
 }
 
 /* ═══════════════ BROWSE TAB ═══════════════ */
-function BrowseTab({ t, lang, userId, onOpenApplyModal, userProfile, onPostAvail }) {
+function BrowseTab({ t, lang, userId, onOpenApplyModal, userProfile, onPostAvail, socket }) {
   const [allJobs, setAllJobs] = useState([]);
   const [filteredJobs, setFilteredJobs] = useState([]);
   const [searchQuery, setSearchQuery] = useState("");
@@ -1730,13 +1958,49 @@ function BrowseTab({ t, lang, userId, onOpenApplyModal, userProfile, onPostAvail
   const [activeFilters, setActiveFilters] = useState(null);
   const [skillFilterActive, setSkillFilterActive] = useState(true);
   const workerSkill = ((userProfile?.skill || userProfile?.category || userProfile?.trade || "").toLowerCase().trim());
-  useEffect(() => { fetch(`${API}/api/jobs`).then(r => r.json()).then(d => { const jobs = Array.isArray(d) ? d : []; setAllJobs(jobs); }).catch(() => {}); }, []);
+
+  useEffect(() => {
+    const token = typeof window !== "undefined" ? localStorage.getItem("token") : null;
+    const headers = token ? { Authorization: `Bearer ${token}` } : {};
+    fetch(`${API}/api/jobs`, { headers }).then(r => r.json()).then(d => { const jobs = Array.isArray(d) ? d : []; setAllJobs(jobs); }).catch(() => {});
+  }, []);
+
+  useEffect(() => {
+    if (!socket) return;
+    const onNewJob = (data) => {
+      const newJob = {
+        _id: data.requestId,
+        title: data.title || data.category || "Job",
+        category: data.category || "other",
+        employer: { _id: data.employerId, name: data.employerName || "" },
+        workLocation: data.workLocation || data.pickupLocation || "",
+        location: data.workLocation || data.pickupLocation || "",
+        salary: data.offeredPrice ? `Rs. ${data.offeredPrice}` : "Negotiable",
+        offeredPrice: data.offeredPrice || 0,
+        urgency: data.urgency || "flexible",
+        status: "active",
+        type: data.category || "temporary",
+        description: data.description || "",
+        lat: data.lat,
+        lng: data.lng,
+        postedAt: Date.now(),
+      };
+      setAllJobs(prev => {
+        if (prev.some(j => j._id === newJob._id)) return prev;
+        return [newJob, ...prev];
+      });
+    };
+    socket.on("new_job_request", onNewJob);
+    return () => socket.off("new_job_request", onNewJob);
+  }, [socket]);
+
   useEffect(() => {
     if (activeFilters) return;
     if (skillFilterActive && workerSkill) {
       setFilteredJobs(allJobs.filter(j => (j.category || j.type || "").toLowerCase().includes(workerSkill) || workerSkill.split(" ").some(w => (j.category || j.type || j.title || "").toLowerCase().includes(w)) || (j.title || "").toLowerCase().includes(workerSkill)));
     } else { setFilteredJobs(allJobs); }
   }, [allJobs, skillFilterActive, workerSkill, activeFilters]);
+
   const handleAIFilter = async () => {
     if (!searchQuery.trim()) return;
     setFiltering(true);
@@ -1804,21 +2068,39 @@ function BrowseTab({ t, lang, userId, onOpenApplyModal, userProfile, onPostAvail
             <p style={{ fontSize: 13, marginBottom: skillFilterActive && workerSkill ? 16 : 0 }}>{t.noJobsFoundSub}</p>
             {skillFilterActive && workerSkill && <button onClick={toggleSkillFilter} style={{ padding: "9px 20px", borderRadius: 10, border: "none", background: "#f1f5f9", color: "#475569", fontSize: 13, fontWeight: 600, cursor: "pointer" }}>{t.skillFilterOff}</button>}
           </div>
-        ) : filteredJobs.map(job => (
-          <div key={job._id} style={{ background: "#fff", borderRadius: 16, padding: 24, boxShadow: "0 2px 12px rgba(0,0,0,0.06)" }}>
-            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 12 }}>
-              <div><h4 style={{ fontSize: 17, fontWeight: 700, color: "#0f172a", margin: "0 0 4px" }}>{job.title}</h4><p style={{ fontSize: 13, color: "#64748b", margin: 0 }}>{job.employer?.name}</p></div>
-              <span style={{ background: "#eff6ff", color: "#3b82f6", padding: "4px 12px", borderRadius: 20, fontSize: 12, fontWeight: 600 }}>{job.type || job.category}</span>
+        ) : filteredJobs.map(job => {
+          const displayLocation = job.workLocation || job.location || "";
+          const rawSalary = String(job.salary || job.offeredPrice || "").replace(/^Rs\.\s*/i, "");
+          const displaySalary = rawSalary || (job.offeredPrice ? String(job.offeredPrice) : "");
+          const isNew = job.postedAt && (Date.now() - job.postedAt < 60000);
+          return (
+            <div key={job._id} style={{ background: "#fff", borderRadius: 16, padding: 24, boxShadow: "0 2px 12px rgba(0,0,0,0.06)", border: isNew ? "2px solid #22c55e" : "2px solid transparent" }}>
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 12 }}>
+                <div>
+                  <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                    <h4 style={{ fontSize: 17, fontWeight: 700, color: "#0f172a", margin: "0 0 4px" }}>{job.title}</h4>
+                    {isNew && <span style={{ fontSize: 10, fontWeight: 800, background: "#dcfce7", color: "#16a34a", padding: "2px 8px", borderRadius: 20 }}>NEW</span>}
+                  </div>
+                  <p style={{ fontSize: 13, color: "#64748b", margin: 0 }}>{job.employer?.name}</p>
+                </div>
+                <span style={{ background: "#eff6ff", color: "#3b82f6", padding: "4px 12px", borderRadius: 20, fontSize: 12, fontWeight: 600 }}>{job.type || job.category}</span>
+              </div>
+              {job.description && <p style={{ fontSize: 14, color: "#475569", marginBottom: 14, lineHeight: 1.5 }}>{job.description}</p>}
+              <div style={{ display: "flex", gap: 16, marginBottom: 16, flexWrap: "wrap" }}>
+                {displayLocation && <span style={{ fontSize: 13, color: "#64748b", display: "flex", alignItems: "center", gap: 4 }}><MapPin size={14} />{displayLocation}</span>}
+                {displaySalary && <span style={{ fontSize: 13, color: "#64748b", display: "flex", alignItems: "center", gap: 4 }}><DollarSign size={14} />Rs. {displaySalary}</span>}
+                {job.urgency && job.urgency !== "flexible" && <span style={{ fontSize: 12, color: "#f59e0b", fontWeight: 600, background: "#fef3c7", padding: "2px 10px", borderRadius: 20 }}>⚡ {job.urgency}</span>}
+              </div>
+              <button
+                onClick={() => isNew ? onOpenApplyModal(job) : undefined}
+                disabled={!isNew}
+                style={{ width: "100%", padding: 12, background: isNew ? "linear-gradient(135deg,#16a34a,#059669)" : "#e2e8f0", color: isNew ? "#fff" : "#94a3b8", border: "none", borderRadius: 10, fontSize: 14, fontWeight: 700, cursor: isNew ? "pointer" : "not-allowed", opacity: isNew ? 1 : 0.7 }}
+              >
+                {isNew ? t.applyNow : (lang === "ur" ? "بند ہے" : "Closed")}
+              </button>
             </div>
-            <p style={{ fontSize: 14, color: "#475569", marginBottom: 14, lineHeight: 1.5 }}>{job.description}</p>
-            <div style={{ display: "flex", gap: 16, marginBottom: 16, flexWrap: "wrap" }}>
-              {job.location && <span style={{ fontSize: 13, color: "#64748b", display: "flex", alignItems: "center", gap: 4 }}><MapPin size={14} />{job.location}</span>}
-              {job.salary && <span style={{ fontSize: 13, color: "#64748b", display: "flex", alignItems: "center", gap: 4 }}><DollarSign size={14} />Rs. {job.salary}</span>}
-              {job.urgency && <span style={{ fontSize: 12, color: "#f59e0b", fontWeight: 600, background: "#fef3c7", padding: "2px 10px", borderRadius: 20 }}>⚡ {job.urgency}</span>}
-            </div>
-            <button onClick={() => onOpenApplyModal(job)} style={{ width: "100%", padding: 12, background: "linear-gradient(135deg,#16a34a,#059669)", color: "#fff", border: "none", borderRadius: 10, fontSize: 14, fontWeight: 700, cursor: "pointer" }}>{t.applyNow}</button>
-          </div>
-        ))}
+          );
+        })}
       </div>
     </div>
   );
@@ -1827,7 +2109,7 @@ function BrowseTab({ t, lang, userId, onOpenApplyModal, userProfile, onPostAvail
 function FC({ label }) { return <span style={{ background: "#f0f0fe", color: "#4f46e5", fontSize: 12, fontWeight: 600, padding: "4px 12px", borderRadius: 20, border: "1px solid #e0e0fc" }}>{label}</span>; }
 
 /* ═══════════════ JOB REQUEST CARD ═══════════════ */
-function JobRequestCard({ t, lang, req, onAccept, onDecline, onShowCounter, onCounterChange, onSendCounter, onAcceptCounter, onRejectCounter, onDismiss, onOpenTracker }) {
+function JobRequestCard({ t, lang, req, onAccept, onDecline, onShowCounter, onCounterChange, onSendCounter, onAcceptCounter, onRejectCounter, onDismiss, onCancelRequest, onOpenTracker }) {
   const isInitial = req.cardState === null;
   const isConfirmed = req.cardState === "confirmed";
   const isRejected = req.cardState === "rejected";
@@ -1852,7 +2134,6 @@ function JobRequestCard({ t, lang, req, onAccept, onDecline, onShowCounter, onCo
     <div style={{ background: "#fff", borderRadius: 20, boxShadow: "0 4px 24px rgba(0,0,0,0.08)", border: `2px solid ${borderColor}`, overflow: "hidden", animation: "slideUp 0.3s ease-out" }}>
       <div style={{ height: 4, background: `linear-gradient(90deg,${accentColor},${accentColor}99)` }} />
       <div style={{ padding: 24 }}>
-        {/* Header row */}
         <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 16 }}>
           <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
             <div style={{ width: 8, height: 8, borderRadius: "50%", background: accentColor, flexShrink: 0 }} />
@@ -1864,8 +2145,6 @@ function JobRequestCard({ t, lang, req, onAccept, onDecline, onShowCounter, onCo
             </button>
           )}
         </div>
-
-        {/* Job details */}
         <div style={{ background: "linear-gradient(135deg,#0f172a,#1e3a5f)", borderRadius: 14, padding: 18, marginBottom: 14, color: "#fff" }}>
           <h3 style={{ fontSize: 17, fontWeight: 800, margin: "0 0 8px", textTransform: "capitalize" }}>{req.title || req.category}</h3>
           {req.description && (
@@ -1880,8 +2159,6 @@ function JobRequestCard({ t, lang, req, onAccept, onDecline, onShowCounter, onCo
             </div>
           )}
         </div>
-
-        {/* Employer offer */}
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 16, padding: "12px 16px", background: "#f0fdf4", borderRadius: 12, border: "1.5px solid #86efac" }}>
           <div>
             <div style={{ fontSize: 10, color: "#16a34a", fontWeight: 800, marginBottom: 2, textTransform: "uppercase", letterSpacing: ".06em" }}>{t.employerOffer}</div>
@@ -1893,7 +2170,6 @@ function JobRequestCard({ t, lang, req, onAccept, onDecline, onShowCounter, onCo
           </div>
         </div>
 
-        {/* Action area */}
         {isInitial && req.budgetType === "open" && (
           <div style={{ background: "#eff6ff", borderRadius: 12, padding: "14px 16px", border: "1.5px solid #bfdbfe", marginBottom: 4 }}>
             <p style={{ fontSize: 12.5, fontWeight: 700, color: "#1d4ed8", margin: "0 0 10px" }}>
@@ -1941,7 +2217,10 @@ function JobRequestCard({ t, lang, req, onAccept, onDecline, onShowCounter, onCo
           <div style={{ textAlign: "center", padding: "12px 0" }}>
             <div style={{ width: 44, height: 44, border: "4px solid #dcfce7", borderTopColor: "#16a34a", borderRadius: "50%", animation: "spin 1s linear infinite", margin: "0 auto 12px" }} />
             <p style={{ fontWeight: 700, color: "#0f172a", fontSize: 14, marginBottom: 4 }}>{lang === "ur" ? "درخواست قبول!" : "Request Accepted!"}</p>
-            <p style={{ fontSize: 12.5, color: "#64748b", margin: 0 }}>{lang === "ur" ? "آجر کی تصدیق کا انتظار ہے..." : "Waiting for employer to confirm you..."}</p>
+            <p style={{ fontSize: 12.5, color: "#64748b", margin: "0 0 12px" }}>{lang === "ur" ? "آجر کی تصدیق کا انتظار ہے..." : "Waiting for employer to confirm you..."}</p>
+            <button onClick={onCancelRequest} style={{ padding: "8px 20px", borderRadius: 10, border: "1.5px solid #fecaca", background: "#fef2f2", color: "#dc2626", fontSize: 13, fontWeight: 600, cursor: "pointer" }}>
+              ✕ {lang === "ur" ? "درخواست منسوخ کریں" : "Cancel Request"}
+            </button>
           </div>
         )}
 
@@ -1949,7 +2228,10 @@ function JobRequestCard({ t, lang, req, onAccept, onDecline, onShowCounter, onCo
           <div style={{ textAlign: "center", padding: "12px 0" }}>
             <div style={{ width: 44, height: 44, border: "4px solid #dbeafe", borderTopColor: "#3b82f6", borderRadius: "50%", animation: "spin 1s linear infinite", margin: "0 auto 12px" }} />
             <p style={{ fontWeight: 700, color: "#0f172a", fontSize: 14, marginBottom: 4 }}>{t.offerSent}</p>
-            <p style={{ fontSize: 12.5, color: "#64748b", margin: 0 }}>{t.yourOfferWas} Rs. {req.cardCounter}</p>
+            <p style={{ fontSize: 12.5, color: "#64748b", margin: "0 0 12px" }}>{t.yourOfferWas} Rs. {req.cardCounter}</p>
+            <button onClick={onCancelRequest} style={{ padding: "8px 20px", borderRadius: 10, border: "1.5px solid #fecaca", background: "#fef2f2", color: "#dc2626", fontSize: 13, fontWeight: 600, cursor: "pointer" }}>
+              ✕ {lang === "ur" ? "پیشکش منسوخ کریں" : "Cancel Offer"}
+            </button>
           </div>
         )}
 

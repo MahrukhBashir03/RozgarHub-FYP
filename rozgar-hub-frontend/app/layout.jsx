@@ -3,6 +3,7 @@ import { LanguageProvider } from "./context/LanguageContext";
 import "leaflet/dist/leaflet.css";
 import Script from "next/script";
 import SuppressWarnings from "../components/SuppressWarnings";
+import VoiceBotWrapper from "../components/VoiceBotWrapper";
 
 export const metadata = {
   title: "Rozgar Hub",
@@ -38,6 +39,7 @@ export default function RootLayout({ children }) {
 
         <LanguageProvider>
           {children}
+          <VoiceBotWrapper />
         </LanguageProvider>
 
       </body>

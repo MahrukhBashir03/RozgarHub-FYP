@@ -13,8 +13,9 @@ import {
 } from "lucide-react";
 import JobTracker from "@/components/JobTracker";
 
-const socket = io("http://localhost:5000");
-if (typeof window !== "undefined") {
+// Guard against SSR — socket.io must only run in the browser
+const socket = typeof window !== "undefined" ? io(process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000") : null;
+if (socket && typeof window !== "undefined") {
   window._rozgarSocket = socket;
   socket.on("connect", () => console.log("✅ Employer socket CONNECTED"));
   socket.on("disconnect", () => console.log("❌ Employer socket DISCONNECTED"));
@@ -342,7 +343,7 @@ function ProfileTab({ t, lang, user, userProfile, myPosts, onProfileUpdate }) {
     setChangingPw(true);
     try {
       const token = localStorage.getItem("token");
-      const res = await fetch("http://localhost:5000/api/auth/change-password", {
+      const res = await fetch((process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000") + "/api/auth/change-password", {
         method: "POST",
         headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
         body: JSON.stringify({ currentPassword: pwForm.current, newPassword: pwForm.newPw }),
@@ -367,7 +368,7 @@ function ProfileTab({ t, lang, user, userProfile, myPosts, onProfileUpdate }) {
     try {
       const formData = new FormData();
       formData.append("profilePhoto", file);
-      const res = await fetch("http://localhost:5000/api/auth/update-profile-photo", {
+      const res = await fetch((process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000") + "/api/auth/update-profile-photo", {
         method: "POST",
         headers: { Authorization: `Bearer ${token}` },
         body: formData,
@@ -394,7 +395,7 @@ function ProfileTab({ t, lang, user, userProfile, myPosts, onProfileUpdate }) {
     try {
       const token = localStorage.getItem("token");
       if (!token) { showToastMsg("Not logged in"); setSaving(false); return; }
-      const res = await fetch("http://localhost:5000/api/auth/update-profile", {
+      const res = await fetch((process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000") + "/api/auth/update-profile", {
         method: "PATCH",
         headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
         body: JSON.stringify(editForm),
@@ -714,13 +715,13 @@ function PostJobFeedbackModal({ t, lang, open, worker, job, requestId, onClose, 
     if (rating === 0) return;
     setSubmitting(true);
     const payload = { requestId, workerId: worker?.workerId, workerName: worker?.workerName, rating, comment, issues: selectedIssues, hasIssue: selectedIssues.length > 0, submittedAt: new Date().toISOString() };
-    try { await fetch("http://localhost:5000/api/job-requests/feedback", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(payload) }); } catch (_) {}
+    try { await fetch((process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000") + "/api/job-requests/feedback", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(payload) }); } catch (_) {}
     setSubmitted(true); setSubmitting(false);
     setTimeout(() => { onSubmit(payload); onClose(); }, 2200);
   };
   const activeRating = hoverRating || rating;
   return (
-    <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.6)", zIndex: 700, display: "flex", alignItems: "center", justifyContent: "center", padding: 16, backdropFilter: "blur(6px)" }}>
+    <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.6)", zIndex: 9000, display: "flex", alignItems: "center", justifyContent: "center", padding: 16, backdropFilter: "blur(6px)" }}>
       <div style={{ background: "#fff", borderRadius: 24, width: "100%", maxWidth: 480, maxHeight: "92vh", overflowY: "auto", boxShadow: "0 32px 80px rgba(0,0,0,0.3)", animation: "slideUp .4s cubic-bezier(.4,0,.2,1)" }}>
         {submitted ? (
           <div style={{ padding: "52px 32px", textAlign: "center" }}>
@@ -1021,26 +1022,26 @@ export default function EmployerDashboard() {
   const [feedbackJob, setFeedbackJob] = useState(null);
   const [feedbackRequestId, setFeedbackRequestId] = useState(null);
 
+  const [browseApplications, setBrowseApplications] = useState([]);
+
   const showToast = (msg) => { setToastMsg(msg); clearTimeout(toastTimerRef.current); toastTimerRef.current = setTimeout(() => setToastMsg(""), 3000); };
 
   useEffect(() => {
+    if (!confirmedWorker) return;
     const handleBeforeUnload = (e) => { e.preventDefault(); e.returnValue = ""; return e.returnValue; };
     window.addEventListener("beforeunload", handleBeforeUnload);
     return () => window.removeEventListener("beforeunload", handleBeforeUnload);
-  }, []);
+  }, [confirmedWorker]);
 
   useEffect(() => {
     const u = localStorage.getItem("user");
     if (u) {
       const p = JSON.parse(u);
       setUser(p);
-      if (p?.id && typeof window !== "undefined") {
-        window.history.replaceState(null, "", `/employer/profile/${p.id}`);
-      }
-      socket.emit("join", p.id);
+      socket?.emit("join", p.id);
       const token = localStorage.getItem("token");
       if (token) {
-        fetch("http://localhost:5000/api/auth/me", { headers: { Authorization: `Bearer ${token}` } })
+        fetch((process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000") + "/api/auth/me", { headers: { Authorization: `Bearer ${token}` } })
           .then(r => r.json()).then(data => {
             const fresh = data.data || data.user;
             if (fresh) {
@@ -1060,10 +1061,18 @@ export default function EmployerDashboard() {
   useEffect(() => { if (user) localStorage.setItem(`myposts_${user.id}`, JSON.stringify(myPosts)); }, [myPosts, user]);
 
   useEffect(() => {
+    if (!socket) return;
     socket.on("worker_job_accept", (data) => { setWorkerAccepts(prev => { const exists = prev.find(w => w.workerId === data.workerId); return exists ? prev : [...prev, data]; }); addNotif(`✅ ${data.workerName} accepted your request!`); });
     socket.on("worker_offer", data => { setIncomingOffers(prev => { const ex = prev.find(o => o.workerId === data.workerId); return ex ? prev.map(o => o.workerId === data.workerId ? data : o) : [...prev, data]; }); addNotif(`${data.workerName} offered Rs. ${data.price}`); });
     socket.on("worker_accepted", data => { setConfirmedWorker(data); setStep("tracking"); });
-    return () => { socket.off("worker_job_accept"); socket.off("worker_offer"); socket.off("worker_accepted"); };
+    socket.on("browse_job_applied", (data) => {
+      addNotif(`👷 ${data.workerName || "A worker"} applied to "${data.title}" — Rs. ${data.offeredRate}`);
+      setBrowseApplications(prev => {
+        if (prev.some(a => a.applicationId === data.applicationId)) return prev;
+        return [data, ...prev];
+      });
+    });
+    return () => { socket.off("worker_job_accept"); socket.off("worker_offer"); socket.off("worker_accepted"); socket.off("browse_job_applied"); };
   }, []);
 
   useEffect(() => {
@@ -1079,7 +1088,7 @@ export default function EmployerDashboard() {
   const refetchProfile = () => {
     const token = localStorage.getItem("token");
     if (!token) return;
-    fetch("http://localhost:5000/api/auth/me", { headers: { Authorization: `Bearer ${token}` } })
+    fetch((process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000") + "/api/auth/me", { headers: { Authorization: `Bearer ${token}` } })
       .then(r => r.json())
       .then(data => {
         const fresh = data.data || data.user;
@@ -1106,19 +1115,17 @@ export default function EmployerDashboard() {
     const finalCategory = getFinalCategory();
     const payload = { ...jobRequest, category: finalCategory, employer: user.id, location: jobRequest.workLocation || jobRequest.pickupLocation || "Not specified", salary: jobRequest.budgetType === "fixed" && jobRequest.offeredPrice ? `Rs. ${jobRequest.offeredPrice}` : "Negotiable", type: "temporary", latitude: jobRequest.lat, longitude: jobRequest.lng };
     try {
-      const res = await fetch("http://localhost:5000/api/jobs", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(payload) });
+      const res = await fetch((process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000") + "/api/jobs", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(payload) });
       const data = await res.json();
       if (!res.ok) { setSubmitError(data.error || "Failed to post"); setSubmitting(false); return; }
       setFirstJobPosted(true);
       const token = localStorage.getItem("token");
-      if (token) { fetch("http://localhost:5000/api/auth/update-profile", { method: "PATCH", headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` }, body: JSON.stringify({ firstJobPosted: true }) }).then(() => refetchProfile()).catch(() => {}); }
+      if (token) { fetch((process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000") + "/api/auth/update-profile", { method: "PATCH", headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` }, body: JSON.stringify({ firstJobPosted: true }) }).then(() => refetchProfile()).catch(() => {}); }
       const post = { ...jobRequest, category: finalCategory, id: data._id || Date.now().toString(), backendId: data._id, status: "live", createdAt: new Date().toISOString(), updatedAt: new Date().toISOString() };
       setMyPosts(prev => [post, ...prev]);
-      let requestId = data._id;
+      const requestId = data._id;
       try {
-        const jrRes = await fetch("http://localhost:5000/api/job-requests", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ ...jobRequest, category: finalCategory, employerId: user.id }) });
-        const jrData = await jrRes.json();
-        if (jrData._id) requestId = jrData._id;
+        await fetch((process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000") + "/api/job-requests", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ ...jobRequest, category: finalCategory, employerId: user.id, jobId: requestId }) });
       } catch (_) {}
       setActiveRequestId(requestId);
       socket.emit("new_job_request", { requestId, employerId: user.id, employerName: user.name, ...jobRequest, category: finalCategory, lat: jobRequest.lat, lng: jobRequest.lng });
@@ -1140,18 +1147,16 @@ export default function EmployerDashboard() {
     const finalCategory = post.category || "other";
     const payload = { ...post, category: finalCategory, employer: user.id, location: post.workLocation || post.pickupLocation || "Not specified", salary: post.budgetType === "fixed" && post.offeredPrice ? `Rs. ${post.offeredPrice}` : "Negotiable", type: "temporary", latitude: post.lat, longitude: post.lng };
     try {
-      const res = await fetch("http://localhost:5000/api/jobs", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(payload) });
+      const res = await fetch((process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000") + "/api/jobs", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(payload) });
       const data = await res.json();
       if (res.ok) {
         setFirstJobPosted(true);
         const token = localStorage.getItem("token");
-        if (token) { fetch("http://localhost:5000/api/auth/update-profile", { method: "PATCH", headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` }, body: JSON.stringify({ firstJobPosted: true }) }).then(() => refetchProfile()).catch(() => {}); }
+        if (token) { fetch((process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000") + "/api/auth/update-profile", { method: "PATCH", headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` }, body: JSON.stringify({ firstJobPosted: true }) }).then(() => refetchProfile()).catch(() => {}); }
         setMyPosts(prev => prev.map(p => p.id === post.id ? { ...p, status: "live", backendId: data._id, updatedAt: new Date().toISOString() } : p));
-        let requestId = data._id;
+        const requestId = data._id;
         try {
-          const jrRes = await fetch("http://localhost:5000/api/job-requests", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ ...post, category: finalCategory, employerId: user.id }) });
-          const jrData = await jrRes.json();
-          if (jrData._id) requestId = jrData._id;
+          await fetch((process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000") + "/api/job-requests", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ ...post, category: finalCategory, employerId: user.id, jobId: requestId }) });
         } catch (_) {}
         setActiveRequestId(requestId);
         socket.emit("new_job_request", { requestId, employerId: user.id, employerName: user.name, ...post, category: finalCategory, lat: post.lat, lng: post.lng });
@@ -1214,6 +1219,54 @@ export default function EmployerDashboard() {
   };
 
   const handleFeedbackSkip = () => { setShowFeedback(false); resetFlow(); };
+
+  const handleAcceptBrowseApp = async (applicationId) => {
+    try {
+      const res = await fetch(`http://localhost:5000/api/applications/${applicationId}/accept`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ employerId: user.id, employerName: user.name }),
+      });
+      const data = await res.json();
+      if (!res.ok) { showToast(data.error || "Failed to accept application"); return; }
+      const { application, jobRequest: jr } = data;
+      setBrowseApplications(prev => prev.filter(a => a.applicationId !== applicationId));
+      setJobRequest(prev => ({
+        ...prev,
+        title:        application.job.title        || "",
+        category:     application.job.category     || "",
+        workLocation: application.job.workLocation || "",
+        offeredPrice: application.offeredRate,
+        lat:          application.job.lat || null,
+        lng:          application.job.lng || null,
+      }));
+      setActiveRequestId(jr._id);
+      setConfirmedWorker({
+        workerId:    application.worker._id,
+        workerName:  application.worker.name  || "",
+        workerPhone: application.worker.phone || "",
+        price:       application.offeredRate,
+      });
+      setStep("tracking");
+      socket.emit("browse_application_accepted", {
+        applicationId: application._id,
+        workerId:      application.worker._id,
+        requestId:     jr._id,
+        jobId:         application.job._id,
+        title:         application.job.title        || "",
+        category:      application.job.category     || "",
+        workLocation:  application.job.workLocation || "",
+        lat:           application.job.lat,
+        lng:           application.job.lng,
+        employerId:    user.id,
+        employerName:  user.name  || "",
+        employerPhone: user.phone || "",
+        agreedPrice:   application.offeredRate,
+      });
+    } catch (err) {
+      showToast("Error accepting application");
+    }
+  };
 
   const handleLogout = () => { localStorage.removeItem("user"); localStorage.removeItem("token"); window.location.href = "/"; };
 
@@ -1403,6 +1456,9 @@ export default function EmployerDashboard() {
                 onEdit={(post) => { setEditingPost(post); setShowEditModal(true); }}
                 onDelete={(post) => setDeleteConfirm({ id: post.id, title: post.title })}
                 onPublishDraft={handlePublishDraft}
+                onAcceptBrowseApp={handleAcceptBrowseApp}
+                browseApplications={browseApplications}
+                onDismissBrowseApp={(appId) => setBrowseApplications(prev => prev.filter(a => a.applicationId !== appId))}
               />
             )}
             {step !== "tracking" && activeTab === "history" && (
@@ -1423,8 +1479,77 @@ export default function EmployerDashboard() {
   );
 }
 
+/* ═══════════════ BROWSE JOB APPLICANTS SECTION ═══════════════ */
+function BrowseApplicants({ jobId, lang, onAcceptBrowseApp }) {
+  const [apps, setApps]         = useState([]);
+  const [open, setOpen]         = useState(false);
+  const [loading, setLoading]   = useState(false);
+  const [accepting, setAccepting] = useState(null);
+
+  const load = async () => {
+    if (!jobId) return;
+    setLoading(true);
+    try {
+      const res = await fetch(`http://localhost:5000/api/applications/job/${jobId}`);
+      const data = await res.json();
+      setApps(Array.isArray(data) ? data : []);
+    } catch (_) { setApps([]); }
+    setLoading(false);
+  };
+
+  const toggle = () => { if (!open) load(); setOpen(o => !o); };
+
+  const handleAccept = async (appId) => {
+    setAccepting(appId);
+    await onAcceptBrowseApp(appId);
+    setAccepting(null);
+  };
+
+  const pendingApps = apps.filter(a => a.status === "pending");
+  const count = pendingApps.length;
+
+  return (
+    <div style={{ marginTop: 10 }}>
+      <button onClick={toggle} style={{ display: "flex", alignItems: "center", gap: 8, padding: "8px 14px", borderRadius: 10, border: "1.5px solid #bfdbfe", background: open ? "#eff6ff" : "#f8fafc", cursor: "pointer", fontSize: 12, fontWeight: 700, color: "#1d4ed8", width: "100%" }}>
+        <span>👥 {lang === "ur" ? "براؤز درخواستیں" : "Browse Applicants"}</span>
+        <span style={{ marginLeft: "auto", background: count > 0 ? "#dbeafe" : "#f1f5f9", color: count > 0 ? "#1d4ed8" : "#94a3b8", borderRadius: 20, padding: "1px 8px", fontSize: 11 }}>{count}</span>
+        <span style={{ fontSize: 10 }}>{open ? "▲" : "▼"}</span>
+      </button>
+      {open && (
+        <div style={{ marginTop: 8, borderRadius: 10, border: "1.5px solid #e2e8f0", overflow: "hidden" }}>
+          {loading ? (
+            <div style={{ padding: 20, textAlign: "center", color: "#94a3b8", fontSize: 13 }}>Loading…</div>
+          ) : pendingApps.length === 0 ? (
+            <div style={{ padding: 16, textAlign: "center", color: "#94a3b8", fontSize: 13 }}>
+              {lang === "ur" ? "کوئی درخواست نہیں" : "No pending applicants"}
+            </div>
+          ) : (
+            <div style={{ display: "flex", flexDirection: "column" }}>
+              {pendingApps.map((app, i) => (
+                <div key={app._id} style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "12px 16px", borderBottom: i < pendingApps.length - 1 ? "1px solid #f1f5f9" : "none", gap: 10 }}>
+                  <div style={{ flex: 1, minWidth: 0 }}>
+                    <div style={{ fontSize: 14, fontWeight: 700, color: "#0f172a" }}>{app.worker?.name || "Worker"}</div>
+                    {app.worker?.phone && <div style={{ fontSize: 12, color: "#64748b" }}>📞 {app.worker.phone}</div>}
+                    <div style={{ fontSize: 13, color: "#16a34a", fontWeight: 700 }}>💬 Rs. {app.offeredRate}</div>
+                  </div>
+                  <button
+                    onClick={() => handleAccept(app._id)}
+                    disabled={accepting === app._id}
+                    style={{ padding: "8px 16px", borderRadius: 9, border: "none", background: accepting === app._id ? "#e2e8f0" : "linear-gradient(135deg,#22c55e,#16a34a)", color: accepting === app._id ? "#94a3b8" : "#fff", fontSize: 12, fontWeight: 700, cursor: accepting === app._id ? "not-allowed" : "pointer", whiteSpace: "nowrap", flexShrink: 0 }}>
+                    {accepting === app._id ? "…" : (lang === "ur" ? "قبول کریں" : "Accept")}
+                  </button>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      )}
+    </div>
+  );
+}
+
 /* ═══════════════ REQUESTS TAB ═══════════════ */
-function RequestsTab({ userId, t, lang, userProfile, firstJobPosted, onGoPostJob, myPosts, postFilter, filteredPosts, setPostFilter, onEdit, onDelete, onPublishDraft }) {
+function RequestsTab({ userId, t, lang, userProfile, firstJobPosted, onGoPostJob, myPosts, postFilter, filteredPosts, setPostFilter, onEdit, onDelete, onPublishDraft, onAcceptBrowseApp, browseApplications = [], onDismissBrowseApp }) {
   const [backendRequests, setBackendRequests] = useState([]);
   const [loading, setLoading] = useState(true);
 
@@ -1439,6 +1564,20 @@ function RequestsTab({ userId, t, lang, userProfile, firstJobPosted, onGoPostJob
   };
 
   useEffect(() => { fetchRequests(); }, [userId]);
+
+  // Live-update status when a job is completed via OTP
+  useEffect(() => {
+    const sock = typeof window !== "undefined" ? window._rozgarSocket : null;
+    if (!sock) return;
+    const onCompleted = (data) => {
+      setBackendRequests(prev =>
+        prev.map(r => (r._id === data.requestId || r._id === data.jobId)
+          ? { ...r, status: "completed" } : r)
+      );
+    };
+    sock.on("job_completed", onCompleted);
+    return () => sock.off("job_completed", onCompleted);
+  }, []);
 
   const urgencyLabel = (u) => ({ "1_hour": "⚡ Within 1 Hour", today: "📅 Today", this_week: "📆 This Week", flexible: "🕐 Flexible" }[u] || u);
 
@@ -1458,6 +1597,41 @@ function RequestsTab({ userId, t, lang, userProfile, firstJobPosted, onGoPostJob
 
   return (
     <div style={{ maxWidth: 720, margin: "0 auto" }}>
+      {browseApplications.length > 0 && (
+        <div style={{ background: "#fff", borderRadius: 16, boxShadow: "0 2px 16px rgba(59,130,246,0.15)", overflow: "hidden", marginBottom: 20, border: "2px solid #bfdbfe" }}>
+          <div style={{ background: "linear-gradient(135deg,#1d4ed8,#2563eb)", padding: "14px 20px", display: "flex", alignItems: "center", gap: 10 }}>
+            <span style={{ fontSize: 18 }}>👷</span>
+            <div>
+              <h3 style={{ color: "#fff", fontSize: 15, fontWeight: 800, margin: 0 }}>{lang === "ur" ? "نئی براؤز درخواستیں" : "New Browse Applications"}</h3>
+              <p style={{ color: "rgba(255,255,255,.55)", fontSize: 11, margin: "2px 0 0" }}>{lang === "ur" ? "کارکنوں نے آپ کی نوکری کے لیے درخواست دی" : "Workers applied to your job — accept to begin tracking"}</p>
+            </div>
+            <span style={{ marginLeft: "auto", background: "#ef4444", color: "#fff", borderRadius: "50%", width: 22, height: 22, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 11, fontWeight: 800 }}>{browseApplications.length}</span>
+          </div>
+          <div style={{ padding: "0 4px" }}>
+            {browseApplications.map((app, i) => (
+              <div key={app.applicationId || i} style={{ display: "flex", alignItems: "center", gap: 12, padding: "14px 18px", borderBottom: i < browseApplications.length - 1 ? "1px solid #f1f5f9" : "none", flexWrap: "wrap" }}>
+                <div style={{ width: 40, height: 40, borderRadius: "50%", background: "linear-gradient(135deg,#3b82f6,#2563eb)", display: "flex", alignItems: "center", justifyContent: "center", color: "#fff", fontSize: 16, fontWeight: 800, flexShrink: 0 }}>{(app.workerName || "W").charAt(0).toUpperCase()}</div>
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  <div style={{ fontSize: 14, fontWeight: 700, color: "#0f172a" }}>{app.workerName || "Worker"}</div>
+                  {app.workerPhone && <div style={{ fontSize: 12, color: "#64748b" }}>📞 {app.workerPhone}</div>}
+                  <div style={{ fontSize: 12, color: "#64748b", marginTop: 1 }}>📌 {app.title || app.category} {app.workLocation ? `— ${app.workLocation}` : ""}</div>
+                  <div style={{ fontSize: 13, color: "#16a34a", fontWeight: 700, marginTop: 2 }}>💬 Offered: Rs. {app.offeredRate}</div>
+                </div>
+                <div style={{ display: "flex", gap: 8, flexShrink: 0 }}>
+                  <button onClick={() => onAcceptBrowseApp(app.applicationId)}
+                    style={{ padding: "9px 18px", borderRadius: 10, border: "none", background: "linear-gradient(135deg,#22c55e,#16a34a)", color: "#fff", fontSize: 13, fontWeight: 700, cursor: "pointer" }}>
+                    {lang === "ur" ? "قبول کریں" : "Accept"}
+                  </button>
+                  <button onClick={() => onDismissBrowseApp(app.applicationId)}
+                    style={{ padding: "9px 14px", borderRadius: 10, border: "1.5px solid #e2e8f0", background: "#f8fafc", color: "#64748b", fontSize: 13, fontWeight: 600, cursor: "pointer" }}>
+                    {lang === "ur" ? "رد کریں" : "Dismiss"}
+                  </button>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
       <div style={{ background: "#fff", borderRadius: 18, boxShadow: "0 2px 16px rgba(15,23,42,0.07)", overflow: "hidden", marginBottom: 24 }}>
         <div style={{ background: "linear-gradient(135deg,#0b1526,#1a3255)", padding: "18px 22px", display: "flex", alignItems: "center", justifyContent: "space-between" }}>
           <div>
@@ -1515,6 +1689,9 @@ function RequestsTab({ userId, t, lang, userProfile, firstJobPosted, onGoPostJob
                       </div>
                     </div>
                   </div>
+                  {post.status === "live" && post.backendId && (
+                    <BrowseApplicants jobId={post.backendId} lang={lang} onAcceptBrowseApp={onAcceptBrowseApp} />
+                  )}
                 </div>
               ))}
             </div>
@@ -1567,10 +1744,13 @@ function RequestsTab({ userId, t, lang, userProfile, firstJobPosted, onGoPostJob
                         <div style={{ width: 40, height: 40, borderRadius: "50%", background: "linear-gradient(135deg,#22c55e,#16a34a)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 15, fontWeight: 800, color: "#fff", flexShrink: 0 }}>{(req.acceptedWorker.name || "W").charAt(0).toUpperCase()}</div>
                         <div>
                           <div style={{ fontSize: 14, fontWeight: 700, color: "#0f172a" }}>🔧 {req.acceptedWorker.name || "—"}</div>
-                          {req.acceptedWorker.phone && <div style={{ fontSize: 12.5, color: "#16a34a", fontWeight: 600, marginTop: 2 }}>📞 {req.acceptedWorker.phone}</div>}
+                          {/* Phone only visible while job is actively in progress */}
+                          {req.status === "in_progress" && req.acceptedWorker.phone && <div style={{ fontSize: 12.5, color: "#16a34a", fontWeight: 600, marginTop: 2 }}>📞 {req.acceptedWorker.phone}</div>}
+                          {req.acceptedWorker.rating && <div style={{ fontSize: 12, color: "#f59e0b", fontWeight: 600, marginTop: 2 }}>⭐ {req.acceptedWorker.rating}</div>}
                         </div>
                       </div>
-                      {req.acceptedWorker.phone && (
+                      {/* Call button only while job is in-progress */}
+                      {req.status === "in_progress" && req.acceptedWorker.phone && (
                         <a href={`tel:${req.acceptedWorker.phone}`} style={{ display: "flex", alignItems: "center", gap: 6, padding: "9px 16px", borderRadius: 10, background: "linear-gradient(135deg,#22c55e,#16a34a)", color: "#fff", textDecoration: "none", fontSize: 13, fontWeight: 700 }}>
                           📞 {t.callWorker}
                         </a>
@@ -1734,7 +1914,7 @@ function PricingSuggestion({ category, location, offeredPrice, lang, t }) {
     debounceRef.current = setTimeout(async () => {
       setLoading(true);
       try {
-        const res = await fetch("http://localhost:5000/api/ai/price-suggestion", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ category, location, offeredPrice, lang }) });
+        const res = await fetch((process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000") + "/api/ai/price-suggestion", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ category, location, offeredPrice, lang }) });
         const data = await res.json();
         if (data.minRate) setSuggestion(data);
       } catch (_) {}
@@ -1767,7 +1947,7 @@ function FindWorkerFlow({ t, lang, step, jobRequest, upd, onSubmit, onSaveAsDraf
     if (!jobRequest.category) { alert(t.selectCategory); return; }
     setGenerating(true);
     try {
-      const res = await fetch("http://localhost:5000/api/ai/generate-description", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ category: getFinalCategory(), title: jobRequest.title, location: jobRequest.workLocation, budget: jobRequest.offeredPrice, lang }) });
+      const res = await fetch((process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000") + "/api/ai/generate-description", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ category: getFinalCategory(), title: jobRequest.title, location: jobRequest.workLocation, budget: jobRequest.offeredPrice, lang }) });
       const data = await res.json();
       if (data.description) upd("description", data.description);
     } catch (_) { alert(t.serverError); }
@@ -1781,7 +1961,7 @@ function FindWorkerFlow({ t, lang, step, jobRequest, upd, onSubmit, onSaveAsDraf
     }
     setParsing(true);
     try {
-      const res = await fetch("http://localhost:5000/api/ai/parse-job", {
+      const res = await fetch((process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000") + "/api/ai/parse-job", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ description: jobRequest.description })
@@ -1826,18 +2006,22 @@ function FindWorkerFlow({ t, lang, step, jobRequest, upd, onSubmit, onSaveAsDraf
           {jobRequest.jobDuration && <Chip color="#6366f1">⏱ {jobRequest.jobDuration}</Chip>}
         </div>
       </div>
-      {workerAccepts.length > 0 && (
-        <div style={{ marginBottom: 18 }}>
-          <div style={{ fontSize: 14.5, fontWeight: 800, color: "#0f172a", marginBottom: 12, display: "flex", alignItems: "center", gap: 8 }}>
-            <div style={{ width: 10, height: 10, borderRadius: "50%", background: "#22c55e", animation: "glow 2s infinite" }} />
-            {t.workersReady}
-            <span style={{ background: "#dcfce7", color: "#16a34a", padding: "2px 10px", borderRadius: 20, fontSize: 12 }}>{workerAccepts.length}</span>
+      {(() => {
+        const offerWorkerIds = incomingOffers.map(o => o.workerId);
+        const availableWorkers = workerAccepts.filter(w => !offerWorkerIds.includes(w.workerId));
+        return availableWorkers.length > 0 ? (
+          <div style={{ marginBottom: 18 }}>
+            <div style={{ fontSize: 14.5, fontWeight: 800, color: "#0f172a", marginBottom: 12, display: "flex", alignItems: "center", gap: 8 }}>
+              <div style={{ width: 10, height: 10, borderRadius: "50%", background: "#22c55e", animation: "glow 2s infinite" }} />
+              {t.workersReady}
+              <span style={{ background: "#dcfce7", color: "#16a34a", padding: "2px 10px", borderRadius: 20, fontSize: 12 }}>{availableWorkers.length}</span>
+            </div>
+            <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+              {availableWorkers.map((worker, i) => <WorkerAcceptCard key={worker.workerId || worker._id || i} t={t} lang={lang} worker={worker} offeredPrice={jobRequest.offeredPrice} onConfirm={() => onConfirmWorker(worker)} onDismiss={() => onDismissWorker(worker)} />)}
+            </div>
           </div>
-          <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
-            {workerAccepts.map((worker, i) => <WorkerAcceptCard key={worker.workerId || worker._id || i} t={t} lang={lang} worker={worker} offeredPrice={jobRequest.offeredPrice} onConfirm={() => onConfirmWorker(worker)} onDismiss={() => onDismissWorker(worker)} />)}
-          </div>
-        </div>
-      )}
+        ) : null;
+      })()}
       {incomingOffers.length > 0 && (
         <div style={{ marginBottom: 18 }}>
           <div style={{ fontSize: 14.5, fontWeight: 700, color: "#0f172a", marginBottom: 12, display: "flex", alignItems: "center", gap: 8 }}>
@@ -1849,13 +2033,17 @@ function FindWorkerFlow({ t, lang, step, jobRequest, upd, onSubmit, onSaveAsDraf
           </div>
         </div>
       )}
-      {workerAccepts.length === 0 && incomingOffers.length === 0 && (
-        <div style={{ ...S.card(), padding: 28, textAlign: "center" }}>
-          <div style={{ fontSize: 32, marginBottom: 12 }}>⏳</div>
-          <p style={{ color: "#475569", fontWeight: 600, fontSize: 14, marginBottom: 4 }}>{t.waitingWorkers}</p>
-          <p style={{ color: "#94a3b8", fontSize: 12.5 }}>{t.waitingWorkersDesc}</p>
-        </div>
-      )}
+      {(() => {
+        const offerWorkerIds = incomingOffers.map(o => o.workerId);
+        const availableWorkers = workerAccepts.filter(w => !offerWorkerIds.includes(w.workerId));
+        return availableWorkers.length === 0 && incomingOffers.length === 0 ? (
+          <div style={{ ...S.card(), padding: 28, textAlign: "center" }}>
+            <div style={{ fontSize: 32, marginBottom: 12 }}>⏳</div>
+            <p style={{ color: "#475569", fontWeight: 600, fontSize: 14, marginBottom: 4 }}>{t.waitingWorkers}</p>
+            <p style={{ color: "#94a3b8", fontSize: 12.5 }}>{t.waitingWorkersDesc}</p>
+          </div>
+        ) : null;
+      })()}
       <div style={{ display: "flex", justifyContent: "center", marginTop: 20 }}>
         <button className="act-btn" onClick={onReset} style={{ ...S.btn("#fef2f2", "#ef4444"), border: "1.5px solid #fecaca" }}>{t.cancelRequest}</button>
       </div>
@@ -2024,7 +2212,7 @@ function PWRSBadge({ workerId, workerName, workerRating, lang, t }) {
   const [loading, setLoading] = useState(true);
   useEffect(() => {
     if (!workerId) return;
-    fetch("http://localhost:5000/api/ai/worker-score", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ workerId, name: workerName || "Worker", category: "general", rating: parseFloat(workerRating) || 4.5, totalJobs: 0, completedJobs: 0, responseTimeMinutes: 10, isVerified: true, profileComplete: true }) })
+    fetch((process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000") + "/api/ai/worker-score", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ workerId, name: workerName || "Worker", category: "general", rating: parseFloat(workerRating) || 4.5, totalJobs: 0, completedJobs: 0, responseTimeMinutes: 10, isVerified: true, profileComplete: true }) })
       .then(r => r.json()).then(data => { setScore(data); setLoading(false); }).catch(() => setLoading(false));
   }, [workerId]);
   if (loading) return <div style={{ background: "#f8fafc", borderRadius: 10, padding: "10px 14px", marginBottom: 12, display: "flex", alignItems: "center", gap: 8 }}><div style={{ width: 14, height: 14, border: "2px solid #6366f1", borderTopColor: "transparent", borderRadius: "50%", animation: "spin 1s linear infinite" }} /><span style={{ fontSize: 12, color: "#94a3b8" }}>Calculating reliability score...</span></div>;
@@ -2071,10 +2259,11 @@ function WorkerAcceptCard({ t, lang, worker, offeredPrice, onConfirm, onDismiss 
 /* ═══════════════ OFFER CARD ═══════════════ */
 function OfferCard({ t, lang, offer, originalPrice, counterPrice, onCounterChange, onAccept, onReject, onCounter }) {
   const [showCounter, setShowCounter] = useState(false);
+  const [counterSent, setCounterSent] = useState(false);
   const diff = Number(offer.price) - Number(originalPrice);
   const isHigher = diff > 0;
   return (
-    <div style={{ ...S.card(), padding: 20, border: `2px solid ${isHigher ? "#fef3c7" : "#dcfce7"}`, animation: "slideUp .3s" }}>
+    <div style={{ ...S.card(), padding: 20, border: `2px solid ${counterSent ? "#bfdbfe" : isHigher ? "#fef3c7" : "#dcfce7"}`, animation: "slideUp .3s" }}>
       <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 14 }}>
         <div style={{ width: 46, height: 46, borderRadius: "50%", background: "linear-gradient(135deg,#8b5cf6,#6d28d9)", overflow: "hidden", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 17, fontWeight: 800, color: "#fff", flexShrink: 0 }}>
           {offer.workerPhoto ? <img src={offer.workerPhoto} alt={offer.workerName} style={{ width: "100%", height: "100%", objectFit: "cover" }} /> : offer.workerName?.charAt(0)}
@@ -2084,16 +2273,32 @@ function OfferCard({ t, lang, offer, originalPrice, counterPrice, onCounterChang
       </div>
       <PWRSBadge workerId={offer.workerId} workerName={offer.workerName} workerRating={offer.rating} lang={lang} t={t} />
       {offer.message && <div style={{ background: "#f8fafc", borderRadius: 9, padding: "8px 12px", marginBottom: 12, fontSize: 12.5, color: "#475569", fontStyle: "italic" }}>"{offer.message}"</div>}
-      <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
-        <button className="act-btn" onClick={onAccept} style={{ ...S.btn("linear-gradient(135deg,#22c55e,#16a34a)", "#fff", { flex: 1, minWidth: 80 }) }}><CheckCircle size={14} /> {t.accept}</button>
-        <button className="act-btn" onClick={() => setShowCounter(!showCounter)} style={{ ...S.btn("#f1f5f9", "#475569", { flex: 1, minWidth: 80 }) }}>{t.counter}</button>
-        <button className="act-btn" onClick={onReject} style={{ ...S.btn("#fef2f2", "#ef4444", { padding: "13px 15px" }) }}><XCircle size={15} /></button>
-      </div>
-      {showCounter && (
-        <div style={{ display: "flex", gap: 8, marginTop: 11 }}>
-          <input type="number" placeholder={t.counterPricePlaceholder} value={counterPrice} onChange={e => onCounterChange(e.target.value)} className="inp" style={{ ...S.input, flex: 1 }} />
-          <button className="act-btn" onClick={() => { onCounter(); setShowCounter(false); }} style={S.btn("#3b82f6")}>{t.send}</button>
+      {counterSent ? (
+        <div style={{ display: "flex", alignItems: "center", gap: 10, padding: "12px 16px", background: "#eff6ff", borderRadius: 11, border: "1.5px solid #bfdbfe" }}>
+          <div style={{ width: 30, height: 30, border: "3px solid #bfdbfe", borderTopColor: "#3b82f6", borderRadius: "50%", animation: "spin 1s linear infinite", flexShrink: 0 }} />
+          <div>
+            <div style={{ fontSize: 13, fontWeight: 700, color: "#1d4ed8" }}>
+              {lang === "ur" ? "جوابی پیشکش بھیج دی گئی" : "Counter offer sent"}
+            </div>
+            <div style={{ fontSize: 12, color: "#3b82f6", marginTop: 2 }}>
+              {lang === "ur" ? `Rs. ${counterPrice} — کارکن کے جواب کا انتظار ہے` : `Rs. ${counterPrice} — waiting for worker's response`}
+            </div>
+          </div>
         </div>
+      ) : (
+        <>
+          <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+            <button className="act-btn" onClick={onAccept} style={{ ...S.btn("linear-gradient(135deg,#22c55e,#16a34a)", "#fff", { flex: 1, minWidth: 80 }) }}><CheckCircle size={14} /> {t.accept}</button>
+            <button className="act-btn" onClick={() => setShowCounter(!showCounter)} style={{ ...S.btn("#f1f5f9", "#475569", { flex: 1, minWidth: 80 }) }}>{t.counter}</button>
+            <button className="act-btn" onClick={onReject} style={{ ...S.btn("#fef2f2", "#ef4444", { padding: "13px 15px" }) }}><XCircle size={15} /></button>
+          </div>
+          {showCounter && (
+            <div style={{ display: "flex", gap: 8, marginTop: 11 }}>
+              <input type="number" placeholder={t.counterPricePlaceholder} value={counterPrice} onChange={e => onCounterChange(e.target.value)} className="inp" style={{ ...S.input, flex: 1 }} />
+              <button className="act-btn" onClick={() => { if (!counterPrice) return; onCounter(); setShowCounter(false); setCounterSent(true); }} style={S.btn("#3b82f6")}>{t.send}</button>
+            </div>
+          )}
+        </>
       )}
     </div>
   );

@@ -1,4 +1,280 @@
-﻿const express = require("express");
+﻿// const express = require("express");
+// const router = express.Router();
+
+// router.post("/generate-description", async (req, res) => {
+//   const { category, title, location, budget, lang } = req.body;
+//   const isUrdu = lang === "ur";
+//   const prompt = isUrdu
+//     ? `آپ ایک پاکستانی بلیو کالر جاب پورٹل RozgarHub کے لیے نوکری کی تفصیل لکھتے ہیں۔\nنوکری کی قسم: ${category}\nعنوان: ${title || category}\nمقام: ${location || "پاکستان"}\nبجٹ: روپے ${budget || "قابل گفتگو"}\nصرف 2-3 جملوں میں سادہ اردو میں تفصیل لکھیں۔ صرف تفصیل لکھیں، کچھ اور نہیں۔`
+//     : `Write a short job description in 2-3 sentences for a Pakistani blue-collar job posting on RozgarHub app.\nJob Category: ${category}\nJob Title: ${title || category}\nLocation: ${location || "Pakistan"}\nBudget: Rs. ${budget || "negotiable"}\nWrite in simple English. Be specific and professional. Only return the description text, nothing else.`;
+//   try {
+//     const response = await fetch("https://api.groq.com/openai/v1/chat/completions", {
+//       method: "POST",
+//       headers: { "Content-Type": "application/json", "Authorization": `Bearer ${process.env.GROQ_API_KEY}` },
+//       body: JSON.stringify({
+//         model: "llama-3.1-8b-instant", max_tokens: 200,
+//         messages: [
+//           { role: "system", content: isUrdu ? "آپ پاکستانی بلیو کالر ورکرز کے لیے اردو میں نوکری کی تفصیل لکھتے ہیں۔ صرف تفصیل لکھیں۔" : "You write short job descriptions for Pakistani blue-collar workers. Always respond with only the description text, no extra words, no formatting." },
+//           { role: "user", content: prompt }
+//         ]
+//       })
+//     });
+//     const data = await response.json();
+//     const text = data?.choices?.[0]?.message?.content;
+//     if (!text) return res.status(500).json({ error: "AI ne kuch generate nahi kiya", raw: data });
+//     res.json({ description: text.trim() });
+//   } catch (err) {
+//     console.error("Groq Error:", err.message);
+//     res.status(500).json({ error: err.message });
+//   }
+// });
+
+// // ─── Smart Job Description Auto-Fill (NLP Parsing) ───────────────────────────
+// router.post("/parse-job", async (req, res) => {
+//   const { description } = req.body;
+//   if (!description) return res.status(400).json({ error: "Description required" });
+
+//   const prompt = `You are a job parser for RozgarHub, a Pakistani blue-collar job portal.
+// Extract information from this job description and return ONLY valid JSON, nothing else.
+
+// Job description: "${description}"
+
+// Return EXACTLY this JSON format with no extra text:
+// {
+//   "title": "short job title in 3-6 words describing the work",
+//   "category": "ONE of: electrician | plumber | carpenter | painter | cleaner | driver | mason | welder | tailor | gardener | cook | security | other",
+//   "location": "city or area name mentioned, or empty string if not mentioned",
+//   "duration": "estimated time to complete the job e.g. 2 hours, 1 day, 3 days, 1 week — or empty string if unclear",
+//   "budget": "numeric estimate in PKR as integer only (no text), or 0 if not mentioned",
+//   "urgency": "one of: 1_hour | today | this_week | flexible — pick based on context clues like urgent/jaldi/aaj/this week",
+//   "skills": ["relevant skill 1", "relevant skill 2"]
+// }
+
+// Rules:
+// - title must describe the actual work task, e.g. "Fix bathroom pipe leak" or "Paint three rooms"
+// - budget should be a reasonable PKR estimate for Pakistani market if mentioned, otherwise 0
+// - If urgency words like "urgent", "jaldi", "abhi" are used, set urgency to 1_hour
+// - If "aaj" or "today" is mentioned, set urgency to today`;
+
+//   try {
+//     const response = await fetch("https://api.groq.com/openai/v1/chat/completions", {
+//       method: "POST",
+//       headers: { "Content-Type": "application/json", "Authorization": `Bearer ${process.env.GROQ_API_KEY}` },
+//       body: JSON.stringify({
+//         model: "llama-3.1-8b-instant",
+//         max_tokens: 400,
+//         temperature: 0.1,
+//         messages: [
+//           { role: "system", content: "You are a JSON extractor for a Pakistani blue-collar job portal. You ONLY return valid JSON. No explanation, no markdown, no extra text. Every field must be present." },
+//           { role: "user", content: prompt }
+//         ]
+//       })
+//     });
+//     const data = await response.json();
+//     let text = data?.choices?.[0]?.message?.content;
+//     if (!text) return res.status(500).json({ error: "AI returned empty response", raw: data });
+
+//     // Strip markdown code fences if present
+//     text = text.trim().replace(/^```(?:json)?/, "").replace(/```$/, "").trim();
+//     const parsed = JSON.parse(text);
+//     res.json(parsed);
+//   } catch (err) {
+//     console.error("Parse-job Error:", err.message);
+//     res.status(500).json({ error: err.message });
+//   }
+// });
+
+// // ─── AI Smart Job Filter ──────────────────────────────────────────────────────
+// router.post("/smart-filter", async (req, res) => {
+//   const { query } = req.body;
+//   if (!query) return res.status(400).json({ error: "Query required" });
+//   const prompt = `You are a job search filter extractor for RozgarHub, a Pakistani blue-collar job portal.\nA worker typed this search query: "${query}"\n\nExtract filter criteria and return ONLY valid JSON, nothing else.\n\nReturn exactly this format:\n{\n  "category": "one of: electrician | plumber | carpenter | painter | cleaner | driver | mason | welder | or empty string if not mentioned",\n  "location": "city or area name in Pakistan, or empty string if not mentioned",\n  "minBudget": 0,\n  "maxBudget": 0,\n  "urgency": "one of: 1_hour | today | this_week | flexible | or empty string if not mentioned",\n  "keywords": ["any other relevant keywords to match in job title or description"]\n}\n\nRules:\n- If worker says "urgent" or "jaldi" set urgency to 1_hour.\n- If worker says "aaj" or "today" set urgency to today.\n- If worker says "is hafte" or "this week" set urgency to this_week.`;
+//   try {
+//     const response = await fetch("https://api.groq.com/openai/v1/chat/completions", {
+//       method: "POST",
+//       headers: { "Content-Type": "application/json", "Authorization": `Bearer ${process.env.GROQ_API_KEY}` },
+//       body: JSON.stringify({
+//         model: "llama-3.1-8b-instant", max_tokens: 300,
+//         messages: [
+//           { role: "system", content: "You are a JSON extractor for a Pakistani job portal. You only return valid JSON. No explanation, no markdown, no extra text." },
+//           { role: "user", content: prompt }
+//         ]
+//       })
+//     });
+//     const data = await response.json();
+//     const text = data?.choices?.[0]?.message?.content;
+//     if (!text) return res.status(500).json({ error: "AI ne kuch return nahi kiya", raw: data });
+//     const parsed = JSON.parse(text.trim());
+//     res.json(parsed);
+//   } catch (err) {
+//     console.error("Smart-filter Error:", err.message);
+//     res.status(500).json({ error: err.message });
+//   }
+// });
+
+// // ─── AI Worker Reliability Score (P-WRS) ─────────────────────────────────────
+// router.post("/worker-score", async (req, res) => {
+//   const { workerId, name, category, rating = 0, totalJobs = 0, completedJobs = 0, responseTimeMinutes = 60, isVerified = false, profileComplete = false } = req.body;
+//   if (!workerId) return res.status(400).json({ error: "workerId required" });
+
+//   const profileScore    = profileComplete ? 25 : 10;
+//   const verifiedScore   = isVerified ? 25 : 0;
+//   const ratingScore     = Math.round((rating / 5) * 20);
+//   const completionRate  = totalJobs > 0 ? Math.round((completedJobs / totalJobs) * 100) : 0;
+//   const completionScore = Math.round((completionRate / 100) * 20);
+//   let responseScore = 10;
+//   if (responseTimeMinutes > 60)  responseScore = 5;
+//   if (responseTimeMinutes > 120) responseScore = 2;
+//   if (responseTimeMinutes > 240) responseScore = 0;
+//   const finalScore = Math.min(100, Math.max(0, profileScore + verifiedScore + ratingScore + completionScore + responseScore));
+
+//   let label, labelUr, color;
+//   if (finalScore >= 80)      { label = "Highly Reliable"; labelUr = "انتہائی قابل اعتماد"; color = "#16a34a"; }
+//   else if (finalScore >= 60) { label = "Reliable";        labelUr = "قابل اعتماد";         color = "#2563eb"; }
+//   else if (finalScore >= 40) { label = "Moderate";        labelUr = "درمیانہ";             color = "#d97706"; }
+//   else                       { label = "New Worker";      labelUr = "نیا ورکر";            color = "#6b7280"; }
+
+//   let explanation = "";
+//   try {
+//     const response = await fetch("https://api.groq.com/openai/v1/chat/completions", {
+//       method: "POST",
+//       headers: { "Content-Type": "application/json", "Authorization": `Bearer ${process.env.GROQ_API_KEY}` },
+//       body: JSON.stringify({
+//         model: "llama-3.1-8b-instant", max_tokens: 100,
+//         messages: [
+//           { role: "system", content: "You write short, honest, encouraging reliability summaries for blue-collar workers. Only return the explanation text." },
+//           { role: "user", content: `Worker: ${name}, Category: ${category}, P-WRS Score: ${finalScore}/100, Rating: ${rating}/5, Jobs Completed: ${completedJobs}/${totalJobs}, CNIC Verified: ${isVerified ? "Yes" : "No"}. Write a 1-2 sentence explanation.` }
+//         ]
+//       })
+//     });
+//     const data = await response.json();
+//     explanation = data?.choices?.[0]?.message?.content?.trim() || "";
+//   } catch (_) {}
+
+//   res.json({ workerId, score: finalScore, label, labelUr, color, explanation, breakdown: { profileScore, verifiedScore, ratingScore, completionScore, responseScore } });
+// });
+
+// // ─── AI Smart Pricing Suggestion ─────────────────────────────────────────────
+// // POST /api/ai/price-suggestion
+// // Body: { category, location, offeredPrice, lang }
+
+// // ── Pakistani market rates (PKR per day) ──
+// const MARKET_RATES = {
+//   electrician: { min: 1500, max: 3000 },
+//   plumber:     { min: 1200, max: 2500 },
+//   carpenter:   { min: 1500, max: 3500 },
+//   painter:     { min: 1000, max: 2500 },
+//   cleaner:     { min: 800,  max: 1800 },
+//   driver:      { min: 1500, max: 3000 },
+//   mason:       { min: 1500, max: 3000 },
+//   welder:      { min: 2000, max: 4000 },
+// };
+
+// // City multipliers — bigger cities = higher rates
+// const CITY_MULTIPLIERS = {
+//   karachi:    1.2,
+//   lahore:     1.15,
+//   islamabad:  1.25,
+//   rawalpindi: 1.1,
+//   peshawar:   0.95,
+//   quetta:     0.9,
+//   faisalabad: 1.0,
+//   multan:     0.95,
+//   default:    1.0,
+// };
+
+// router.post("/price-suggestion", async (req, res) => {
+//   const { category, location, offeredPrice, lang } = req.body;
+
+//   if (!category) return res.status(400).json({ error: "Category required" });
+
+//   // ── Get base market rate ──
+//   const baseRate = MARKET_RATES[category?.toLowerCase()] || { min: 1000, max: 2500 };
+
+//   // ── Apply city multiplier ──
+//   const locationLower = (location || "").toLowerCase();
+//   let multiplier = CITY_MULTIPLIERS.default;
+//   for (const [city, mult] of Object.entries(CITY_MULTIPLIERS)) {
+//     if (city !== "default" && locationLower.includes(city)) {
+//       multiplier = mult;
+//       break;
+//     }
+//   }
+
+//   const minRate = Math.round(baseRate.min * multiplier);
+//   const maxRate = Math.round(baseRate.max * multiplier);
+
+//   // ── Calculate assessment mathematically — NOT by AI ──
+//   const offered = Number(offeredPrice) || 0;
+//   let assessment;
+//   if (offered === 0) {
+//     assessment = "not_specified";
+//   } else if (offered < minRate * 0.85) {
+//     // More than 15% below min → LOW
+//     assessment = "low";
+//   } else if (offered > maxRate * 1.15) {
+//     // More than 15% above max → HIGH
+//     assessment = "high";
+//   } else {
+//     // Within range (including 15% buffer) → FAIR
+//     assessment = "fair";
+//   }
+
+//   // ── Get AI tip (short sentence only, not assessment) ──
+//   const tipPrompt = `Pakistani job portal RozgarHub. Employer offering Rs.${offered}/day for a ${category} in ${location || "Pakistan"}. Market rate is Rs.${minRate}-${maxRate}/day. Assessment: ${assessment}. Write ONE short tip in English under 12 words. Only return the tip text, nothing else.`;
+
+//   let tipEn = "";
+//   let tipUr = "";
+//   try {
+//     const response = await fetch("https://api.groq.com/openai/v1/chat/completions", {
+//       method: "POST",
+//       headers: { "Content-Type": "application/json", "Authorization": `Bearer ${process.env.GROQ_API_KEY}` },
+//       body: JSON.stringify({
+//         model: "llama-3.1-8b-instant", max_tokens: 60,
+//         messages: [
+//           { role: "system", content: "You write very short pricing tips for Pakistani employers. Only return the tip text, under 12 words." },
+//           { role: "user", content: tipPrompt }
+//         ]
+//       })
+//     });
+//     const data = await response.json();
+//     tipEn = data?.choices?.[0]?.message?.content?.trim() || "";
+
+//     // Urdu tip
+//     if (lang === "ur" && tipEn) {
+//       const urResponse = await fetch("https://api.groq.com/openai/v1/chat/completions", {
+//         method: "POST",
+//         headers: { "Content-Type": "application/json", "Authorization": `Bearer ${process.env.GROQ_API_KEY}` },
+//         body: JSON.stringify({
+//           model: "llama-3.1-8b-instant", max_tokens: 80,
+//           messages: [
+//             { role: "system", content: "Translate to simple Urdu. Only return the translation." },
+//             { role: "user", content: tipEn }
+//           ]
+//         })
+//       });
+//       const urData = await urResponse.json();
+//       tipUr = urData?.choices?.[0]?.message?.content?.trim() || tipEn;
+//     }
+//   } catch (_) {
+//     // Fallback tips if AI fails
+//     const fallbacks = {
+//       low:           { en: "Consider raising your budget to attract more workers.", ur: "زیادہ کارکن پانے کے لیے بجٹ بڑھائیں۔" },
+//       fair:          { en: "Great offer! Workers are likely to respond quickly.",   ur: "اچھی پیشکش! کارکن جلدی جواب دیں گے۔" },
+//       high:          { en: "Above market rate — expect faster responses.",          ur: "مارکیٹ سے زیادہ — جلد جواب ملے گا۔" },
+//       not_specified: { en: "Add a budget to attract more workers.",                 ur: "بجٹ شامل کریں۔" },
+//     };
+//     tipEn = fallbacks[assessment]?.en || "";
+//     tipUr = fallbacks[assessment]?.ur || "";
+//   }
+
+//   res.json({ minRate, maxRate, unit: "per day", assessment, tipEn, tipUr });
+// });
+// // ─────────────────────────────────────────────────────────────────────────────
+
+// module.exports = router;
+
+const express = require("express");
 const router = express.Router();
 
 router.post("/generate-description", async (req, res) => {
@@ -74,10 +350,23 @@ Rules:
     let text = data?.choices?.[0]?.message?.content;
     if (!text) return res.status(500).json({ error: "AI returned empty response", raw: data });
 
-    // Strip markdown code fences if present
-    text = text.trim().replace(/^```(?:json)?/, "").replace(/```$/, "").trim();
-    const parsed = JSON.parse(text);
-    res.json(parsed);
+    // Extract JSON object from response — handles markdown fences, leading text, or trailing text
+    text = text.trim();
+    const jsonMatch = text.match(/\{[\s\S]*\}/);
+    if (!jsonMatch) return res.status(500).json({ error: "No JSON found in AI response", raw: text });
+    const parsed = JSON.parse(jsonMatch[0]);
+
+    // Ensure all required fields exist with sensible defaults
+    const safe = {
+      title:    typeof parsed.title    === "string" ? parsed.title.trim()    : "",
+      category: typeof parsed.category === "string" ? parsed.category.toLowerCase().trim() : "other",
+      location: typeof parsed.location === "string" ? parsed.location.trim() : "",
+      duration: typeof parsed.duration === "string" ? parsed.duration.trim() : "",
+      budget:   Number(parsed.budget) > 0 ? Number(parsed.budget) : 0,
+      urgency:  ["1_hour","today","this_week","flexible"].includes(parsed.urgency) ? parsed.urgency : "flexible",
+      skills:   Array.isArray(parsed.skills) ? parsed.skills : [],
+    };
+    res.json(safe);
   } catch (err) {
     console.error("Parse-job Error:", err.message);
     res.status(500).json({ error: err.message });
@@ -269,6 +558,114 @@ router.post("/price-suggestion", async (req, res) => {
   }
 
   res.json({ minRate, maxRate, unit: "per day", assessment, tipEn, tipUr });
+});
+// ─────────────────────────────────────────────────────────────────────────────
+
+// ─── AI Chat Assistant (action-aware, bilingual) ──────────────────────────────
+// POST /api/ai/chat
+// Body: { message, userRole, userId, userName, lang, history }
+router.post("/chat", async (req, res) => {
+  const {
+    message,
+    userRole  = "worker",
+    userId    = "guest",
+    userName  = "User",
+    lang      = "en",
+    history   = [],
+  } = req.body;
+
+  if (!message) return res.status(400).json({ error: "message required" });
+
+  const isEmployer = userRole === "employer";
+  const langNote   = lang === "ur"
+    ? "Respond in Romanized Urdu mixed with English (e.g. 'Bilkul! Main aapki madad kar sakta hoon.')."
+    : "Respond in clear English. Keep it simple for Pakistani blue-collar users.";
+
+  const systemPrompt = isEmployer
+    ? `You are RozgarHub AI, a smart assistant for a Pakistani blue-collar job platform.
+You are helping EMPLOYER "${userName}".
+${langNote}
+
+You help with:
+1. POSTING JOBS — detect phrases like "post a job", "hire a plumber", "I need a carpenter", "job daalna hai"
+2. FINDING WORKERS — help search for available workers
+3. PLATFORM EXPLANATION — how to post jobs, track workers, OTP payment system, CNIC verification
+4. GENERAL QUESTIONS — about RozgarHub features
+
+CRITICAL RULE: Always respond with ONLY valid JSON. No markdown, no extra text.
+
+When employer wants to CREATE/POST A JOB, respond EXACTLY like this:
+{"reply":"your friendly 1-2 sentence response","action":{"type":"CREATE_JOB","data":{"category":"one of: electrician|plumber|carpenter|painter|cleaner|driver|mason|welder|tailor|gardener|cook|security|other","title":"short job title","location":"city in Pakistan","budget":2000,"urgency":"flexible|today|1_hour|this_week","description":"2-3 sentence job description"}}}
+
+For all other responses:
+{"reply":"your helpful 1-2 sentence response"}`
+    : `You are RozgarHub AI, a smart assistant for a Pakistani blue-collar job platform.
+You are helping WORKER "${userName}".
+${langNote}
+
+You help with:
+1. FINDING JOBS — detect phrases like "jobs dhundho", "find work", "electrician jobs", "mujhe kaam chahiye"
+2. HOW TO APPLY — explain bidding, proposedRate, acceptance flow, OTP payment
+3. PLATFORM FLOW — find job → apply (bid) → employer accepts → do work → OTP payment to unlock salary
+4. PROFILE TIPS — CNIC verification, skills, ratings
+5. GENERAL QUESTIONS — about RozgarHub features
+
+CRITICAL RULE: Always respond with ONLY valid JSON. No markdown, no extra text.
+
+When worker wants to FIND JOBS, respond EXACTLY like this:
+{"reply":"your friendly 1-2 sentence response","action":{"type":"FIND_JOBS","data":{"category":"one of: electrician|plumber|carpenter|painter|cleaner|driver|mason|welder|tailor|other|","location":"city in Pakistan or empty string","minBudget":0,"maxBudget":0}}}
+
+For all other responses:
+{"reply":"your helpful 1-2 sentence response"}`;
+
+  const chatHistory = history
+    .slice(-6)
+    .map(h => ({ role: h.role === "bot" ? "assistant" : "user", content: h.text }));
+
+  try {
+    const response = await fetch("https://api.groq.com/openai/v1/chat/completions", {
+      method:  "POST",
+      headers: {
+        "Content-Type":  "application/json",
+        "Authorization": `Bearer ${process.env.GROQ_API_KEY}`,
+      },
+      body: JSON.stringify({
+        model:       "llama-3.3-70b-versatile",
+        max_tokens:  600,
+        temperature: 0.6,
+        response_format: { type: "json_object" },
+        messages: [
+          { role: "system", content: systemPrompt },
+          ...chatHistory,
+          { role: "user", content: message },
+        ],
+      }),
+    });
+
+    const data = await response.json();
+    let text = data?.choices?.[0]?.message?.content?.trim();
+
+    if (!text) return res.status(500).json({ error: "AI returned empty response" });
+
+    // Strip markdown fences if model ignores format instruction
+    text = text.replace(/^```(?:json)?\n?/m, "").replace(/\n?```$/m, "").trim();
+
+    try {
+      const jsonMatch = text.match(/\{[\s\S]*\}/);
+      if (jsonMatch) {
+        const parsed = JSON.parse(jsonMatch[0]);
+        if (!parsed.reply) parsed.reply = text;
+        return res.json(parsed);
+      }
+    } catch (_) {}
+
+    // Fallback — return raw text as reply
+    return res.json({ reply: text });
+
+  } catch (err) {
+    console.error("Chat Error:", err.message);
+    res.status(500).json({ error: err.message });
+  }
 });
 // ─────────────────────────────────────────────────────────────────────────────
 

@@ -1,93 +1,58 @@
-// const express = require('express');
-// const cors = require('cors');
+const express  = require("express");
+const cors     = require("cors");
+const helmet   = require("helmet");
 
-// // ─────────────────────────────────────────────────────────────
-// // IMPORTANT: Sabse pehle models load karo (circular reference avoid karne ke liye)
-// // ─────────────────────────────────────────────────────────────
-// require("./models/User");
-// require("./models/Job");
-// require("./models/Application");   // ← agar aapne Application model bana liya hai
-
-// // Routes
-// const authRoutes = require('./routes/auth.routes');
-// const jobRoutes = require('./routes/job.routes');
-// const workerRoutes = require('./routes/worker.routes');
-// const aiRoutes = require("./routes/ai.routes");
-// const jobRequestRoutes = require("./routes/jobRequest.routes");
-// const notificationRoutes = require("./routes/notification.routes");
-
-// const app = express();
-
-// // CORS
-// app.use(cors({
-//   origin: "http://localhost:3000",
-//   methods: ["GET", "POST", "PUT", "DELETE"],
-//   credentials: true,
-// }));
-
-// app.use(express.json());
-// app.use(express.urlencoded({ extended: true }));
-
-// // Routes
-// app.use("/api/auth", authRoutes);
-// app.use("/api/jobs", jobRoutes);
-// app.use("/api/workers", workerRoutes);
-// app.use("/api/ai", aiRoutes);
-// app.use("/api/job-requests", jobRequestRoutes);
-// app.use("/api/notifications", notificationRoutes);
-
-// // Health Check
-// app.get('/', (req, res) => {
-//   res.send('RozgarHub API running');
-// });
-
-// module.exports = app;
-
-// app.js
-const express = require('express');
-const cors = require('cors');
-
-// ─────────────────────────────────────────────────────────────
-// IMPORTANT: Sabse pehle models load karo (circular reference avoid karne ke liye)
-// ─────────────────────────────────────────────────────────────
+// ── Models ─────────────────────────────────────────────────────
 require("./models/User");
 require("./models/Job");
 require("./models/Application");
 require("./models/JobTitle");
-
-// Routes
-const authRoutes        = require('./routes/auth.routes');
-const jobRoutes         = require('./routes/job.routes');
-const workerRoutes      = require('./routes/worker.routes');
-const aiRoutes          = require("./routes/ai.routes");
-const jobRequestRoutes  = require("./routes/jobRequest.routes");
-const notificationRoutes = require("./routes/notification.routes");
-const jobTitleRoutes    = require("./routes/jobTitle.routes");
+require("./models/SOSEvent");
 
 const app = express();
 
-// CORS
+// ── Security ───────────────────────────────────────────────────
+app.use(helmet({ crossOriginResourcePolicy: { policy: "cross-origin" } }));
+
+// ── CORS ───────────────────────────────────────────────────────
 app.use(cors({
   origin: "http://localhost:3000",
   methods: ["GET", "POST", "PUT", "PATCH", "DELETE"],
   credentials: true,
 }));
 
+// ── Body parsers ───────────────────────────────────────────────
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
-// Routes
-app.use("/api/auth", authRoutes);
-app.use("/api/jobs", jobRoutes);
-app.use("/api/workers", workerRoutes);
-app.use("/api/ai", aiRoutes);
-app.use("/api/job-requests", jobRequestRoutes);
-app.use("/api/notifications", notificationRoutes);
-app.use("/api/job-titles", jobTitleRoutes);
+// ── req.io middleware (set by server.js after io is created) ───
+// Controllers like sos.controller.js use req.io to emit events.
+// server.js calls app.use((req,res,next)=>{ req.io=io; next(); })
+// AFTER requiring this file, so req.io is available in all routes.
 
-// Health Check
-app.get('/', (req, res) => {
-  res.send('RozgarHub API running');
+// ── Routes ─────────────────────────────────────────────────────
+app.use("/api/auth",             require("./routes/auth.routes"));
+app.use("/api/jobs",             require("./routes/job.routes"));
+app.use("/api/workers",          require("./routes/worker.routes"));
+app.use("/api/chat",             require("./routes/chat.routes"));
+app.use("/api/ai",               require("./routes/ai.routes"));
+app.use("/api/admin",            require("./routes/admin.routes"));
+app.use("/api/job-requests",     require("./routes/jobRequest.routes"));
+app.use("/api/job-titles",       require("./routes/jobTitle.routes"));
+app.use("/api/notifications",    require("./routes/notification.routes"));
+app.use("/api/applications",     require("./routes/application.routes"));
+app.use("/api/worker-analytics", require("./routes/workerAnalytics.routes"));
+app.use("/api/sos",              require("./routes/sos.routes")); // ← was missing from server.js
+
+// ── Health check ───────────────────────────────────────────────
+app.get("/", (req, res) => res.send("RozgarHub API running"));
+
+// ── Global error handler ───────────────────────────────────────
+app.use((err, req, res, next) => {
+  console.error("Error:", err.message);
+  if (err.code === "LIMIT_FILE_SIZE")
+    return res.status(400).json({ error: "File too large. Maximum 5MB allowed." });
+  res.status(err.status || 500).json({ error: err.message || "Internal server error" });
 });
 
 module.exports = app;

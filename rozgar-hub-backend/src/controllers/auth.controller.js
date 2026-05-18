@@ -598,27 +598,27 @@
 //   }
 // };
 
-// // ─────────────────────────────────────────────────────────────
-// // UPDATE PROFILE PHOTO  (POST /api/auth/update-profile-photo)
-// // ─────────────────────────────────────────────────────────────
-// exports.updateProfilePhoto = async (req, res) => {
-//   try {
-//     if (!req.file) {
-//       return res.status(400).json({ error: "Profile photo is required." });
-//     }
-//     const photoUrl = req.file.path;
-//     const user = await User.findByIdAndUpdate(
-//       req.user.id,
-//       { $set: { "documents.profilePhoto": photoUrl } },
-//       { new: true, select: "-password -otp -otpExpiry" }
-//     );
-//     if (!user) return res.status(404).json({ error: "User not found." });
-//     res.status(200).json({ message: "Profile photo updated.", user });
-//   } catch (err) {
-//     console.error("updateProfilePhoto error:", err.message);
-//     res.status(500).json({ error: err.message });
-//   }
-// };
+// ─────────────────────────────────────────────────────────────
+// UPDATE PROFILE PHOTO  (POST /api/auth/update-profile-photo)
+// ─────────────────────────────────────────────────────────────
+exports.updateProfilePhoto = async (req, res) => {
+  try {
+    if (!req.file) {
+      return res.status(400).json({ error: "Profile photo is required." });
+    }
+    const photoUrl = req.file.path;
+    const user = await User.findByIdAndUpdate(
+      req.user._id,
+      { $set: { "documents.profilePhoto": photoUrl } },
+      { new: true, select: "-password -otp -otpExpiry" }
+    );
+    if (!user) return res.status(404).json({ error: "User not found." });
+    res.status(200).json({ message: "Profile photo updated.", user });
+  } catch (err) {
+    console.error("updateProfilePhoto error:", err.message);
+    res.status(500).json({ error: err.message });
+  }
+};
 
 // // ─────────────────────────────────────────────────────────────
 // // GOOGLE LOGIN  (POST /api/auth/google)

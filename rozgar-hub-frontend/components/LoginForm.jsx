@@ -77,6 +77,7 @@ export default function LoginPage() {
 
       localStorage.setItem("token", data.token);
       localStorage.setItem("user", JSON.stringify(data.user));
+      window.dispatchEvent(new Event("rozgarhub-login"));
 
       if (data.user.role === "employer") {
         router.push("/employer/profile");
@@ -105,6 +106,7 @@ export default function LoginPage() {
       }
       localStorage.setItem("token", data.token);
       localStorage.setItem("user", JSON.stringify(data.user));
+      window.dispatchEvent(new Event("rozgarhub-login"));
       if (data.user.role === "employer") router.push("/employer/profile");
       else router.push("/worker/profile");
     } catch {
